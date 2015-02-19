@@ -30,7 +30,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-GITLABBOOK_VERSION=0.1
+GITLABBOOK_VERSION=@PACKAGE_VERSION@
 
 initialize() {
 	# A function can not be empty. Comments count as empty.
