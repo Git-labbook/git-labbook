@@ -1,19 +1,14 @@
 #!/bin/sh
 #
-# git-flow -- A collection of Git extensions to provide high-level
-# repository operations for Vincent Driessen's branching model.
-#
-# A blog post presenting this model is found at:
-#    http://blog.avirtualhome.com/development-workflow-using-git/
-#
-# Feel free to contribute to this project at:
-#    http://github.com/petervanderdoes/gitflow
+# git-labbook -- A collection of Git extensions to provide high-level
+# repository operations for reproductible experiments
 #
 # Authors:
-# Copyright 2012-2015 Peter van der Does. All rights reserved.
+# Copyright 2015 Vincent Danjean. All rights reserved.
 #
 # Original Author:
 # Copyright 2010 Vincent Driessen. All rights reserved.
+# Copyright 2012-2015 Peter van der Does. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,16 +36,16 @@ if [ "$DEBUG" = "yes" ]; then
 	set -x
 fi
 
-# Setup the GITFLOW_DIR for different operating systems.
+# Setup the GITLABBOOK_DIR for different operating systems.
 # This is mostly to make sure that we get the correct directory when the
-# git-flow file is a symbolic link
+# git-labbook file is a symbolic link
 case $(uname -s) in
 Linux)
-	export GITFLOW_DIR=$(dirname "$(readlink -e "$0")")
+	export GITLABBOOK_DIR=$(dirname "$(readlink -e "$0")")
 	;;
 FreeBSD|OpenBSD|NetBSD)
 	export FLAGS_GETOPT_CMD='/usr/local/bin/getopt'
-	export GITFLOW_DIR=$(dirname "$(realpath "$0")")
+	export GITLABBOOK_DIR=$(dirname "$(realpath "$0")")
 	;;
 Darwin)
 	PRG="$0"
@@ -62,10 +57,10 @@ Darwin)
 			PRG="$(dirname "$PRG")/$link"
 		fi
 	done
-	export GITFLOW_DIR=$(dirname "$PRG")
+	export GITLABBOOK_DIR=$(dirname "$PRG")
 	;;
 *MINGW*)
-	export GITFLOW_DIR=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+	export GITLABBOOK_DIR=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
 	pwd () {
 		builtin pwd -W
 	}
@@ -73,23 +68,12 @@ Darwin)
 *)
 	# The sed expression here replaces all backslashes by forward slashes.
 	# This helps our Windows users, while not bothering our Unix users.)
-	export GITFLOW_DIR=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+	export GITLABBOOK_DIR=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
 	;;
 esac
 
-# Extra environment settings
-if [ -f ~/.gitflow_export ]; then
-    if grep -E 'GITFLOW_FLAG_(SHOWCOMMANDS|INIT|FEATURE|HOTFIX|RELEASE|SUPPORT)' ~/.gitflow_export > /dev/null; then
-        echo "Using environment variables for \"showcommands\", \"init\", \"feature\", \"hotfix\", \"release\" and \"support\" in ~/.gitflow_export has deprecated, use git config instead."
-        echo ""
-        exit 1;
-    else
-        . ~/.gitflow_export
-    fi
-fi
-
 usage() {
-	echo "usage: git flow <subcommand>"
+	echo "usage: git labbook <subcommand>"
 	echo
 	echo "Available subcommands are:"
 	echo "   init      Initialize a new git repo with support for the branching model."
@@ -98,10 +82,10 @@ usage() {
 	echo "   hotfix    Manage your hotfix branches."
 	echo "   support   Manage your support branches."
 	echo "   version   Shows version information."
-	echo "   config    Manage your git-flow configuration."
+	echo "   config    Manage your git-labbook configuration."
 	echo "   log       Show log deviating from base branch."
 	echo
-	echo "Try 'git flow <subcommand> help' for details."
+	echo "Try 'git labbook <subcommand> help' for details."
 }
 
 main() {
@@ -111,39 +95,39 @@ main() {
 	fi
 
 	# Use the shFlags project to parse the command line arguments
-	. "$GITFLOW_DIR/gitflow-shFlags"
-	FLAGS_PARENT="git flow"
+	. "$GITLABBOOK_DIR/gitlabbook-shFlags"
+	FLAGS_PARENT="git labbook"
 
 	# Load common functionality
-	. "$GITFLOW_DIR/gitflow-common"
+	. "$GITLABBOOK_DIR/gitlabbook-common"
 
 	# allow user to request git action logging
 	DEFINE_boolean 'showcommands' false 'Show actions taken (git commands)'
 	# but if the user prefers that the logging is always on,
 	# use the environmental variables.
-	gitflow_override_flag_boolean 'showcommands' 'showcommands'
+	gitlabbook_override_flag_boolean 'showcommands' 'showcommands'
 
 	# Sanity checks
 	SUBCOMMAND="$1"; shift
 	if [ "${SUBCOMMAND}" = "finish" ] || [ "${SUBCOMMAND}" = "delete" ] || [ "${SUBCOMMAND}" = "publish" ] || [ "${SUBCOMMAND}" = "rebase" ]; then
 		_current_branch=$(git_current_branch)
-		if gitflow_is_prefixed_branch "${_current_branch}"; then
-			if startswith "${_current_branch}" $(git config --get gitflow.prefix.feature); then
+		if gitlabbook_is_prefixed_branch "${_current_branch}"; then
+			if startswith "${_current_branch}" $(git config --get gitlabbook.prefix.feature); then
 				SUBACTION="${SUBCOMMAND}"
 				SUBCOMMAND="feature"
-				_prefix=$(git config --get gitflow.prefix.feature)
+				_prefix=$(git config --get gitlabbook.prefix.feature)
 				_short_branch_name=$(echo ${_current_branch#*${_prefix}})
 			else
-				if startswith "${_current_branch}" $(git config --get gitflow.prefix.hotfix); then
+				if startswith "${_current_branch}" $(git config --get gitlabbook.prefix.hotfix); then
 					SUBACTION="${SUBCOMMAND}"
 					SUBCOMMAND="hotfix"
-					_prefix=$(git config --get gitflow.prefix.hotfix)
+					_prefix=$(git config --get gitlabbook.prefix.hotfix)
 					_short_branch_name=$(echo ${_current_branch#*${_prefix}})
 				else
-					if startswith "${_current_branch}" $(git config --get gitflow.prefix.release); then
+					if startswith "${_current_branch}" $(git config --get gitlabbook.prefix.release); then
 						SUBACTION="${SUBCOMMAND}"
 						SUBCOMMAND="release"
-						_prefix=$(git config --get gitflow.prefix.release)
+						_prefix=$(git config --get gitlabbook.prefix.release)
 						_short_branch_name=$(echo ${_current_branch#*${_prefix}})
 					fi
 				fi
@@ -151,14 +135,14 @@ main() {
 		fi
 	fi
 
-		if [ ! -e "$GITFLOW_DIR/git-flow-$SUBCOMMAND" ]; then
+		if [ ! -e "$GITLABBOOK_DIR/git-labbook-$SUBCOMMAND" ]; then
 		usage
 		exit 1
 	fi
 
 	# Run command
-	. "$GITFLOW_DIR/git-flow-$SUBCOMMAND"
-	FLAGS_PARENT="git flow $SUBCOMMAND"
+	. "$GITLABBOOK_DIR/git-labbook-$SUBCOMMAND"
+	FLAGS_PARENT="git labbook $SUBCOMMAND"
 
 	if [ -z "${SUBACTION}" ]; then
 		# If the first argument is a flag, it starts with '-', we interpret this
@@ -193,7 +177,7 @@ main() {
 		initialize
 	fi
 	if [ $SUBACTION != 'default' ]; then
-		FLAGS_PARENT="git flow $SUBCOMMAND $SUBACTION"
+		FLAGS_PARENT="git labbook $SUBCOMMAND $SUBACTION"
 	fi
 
 	cmd_$SUBACTION "$@" "${_short_branch_name}"

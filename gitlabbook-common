@@ -1,18 +1,13 @@
 #
-# git-flow -- A collection of Git extensions to provide high-level
-# repository operations for Vincent Driessen's branching model.
-#
-# A blog post presenting this model is found at:
-#    http://blog.avirtualhome.com/development-workflow-using-git/
-#
-# Feel free to contribute to this project at:
-#    http://github.com/petervanderdoes/gitflow
+# git-labbook -- A collection of Git extensions to provide high-level
+# repository operations for reproductible experiments
 #
 # Authors:
-# Copyright 2012-2015 Peter van der Does. All rights reserved.
+# Copyright 2015 Vincent Danjean. All rights reserved.
 #
 # Original Author:
 # Copyright 2010 Vincent Driessen. All rights reserved.
+# Copyright 2012-2015 Peter van der Does. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -261,64 +256,64 @@ git_fetch_branch() {
 }
 
 #
-# gitflow specific common functionality
+# gitlabbook specific common functionality
 #
 
-# Function used to check if the repository is git-flow enabled.
-gitflow_has_master_configured() {
+# Function used to check if the repository is git-labbook enabled.
+gitlabbook_has_master_configured() {
 	local master
 
-	master=$(git config --get gitflow.branch.master)
+	master=$(git config --get gitlabbook.branch.master)
 	[ "$master" != "" ] && git_local_branch_exists "$master"
 }
 
-gitflow_has_develop_configured() {
+gitlabbook_has_develop_configured() {
 	local develop
 
-	develop=$(git config --get gitflow.branch.develop)
+	develop=$(git config --get gitlabbook.branch.develop)
 	[ "$develop" != "" ] && git_local_branch_exists "$develop"
 }
 
-gitflow_has_prefixes_configured() {
-	git config --get gitflow.prefix.feature >/dev/null 2>&1     && \
-	git config --get gitflow.prefix.release >/dev/null 2>&1     && \
-	git config --get gitflow.prefix.hotfix >/dev/null 2>&1      && \
-	git config --get gitflow.prefix.support >/dev/null 2>&1     && \
-	git config --get gitflow.prefix.versiontag >/dev/null 2>&1
+gitlabbook_has_prefixes_configured() {
+	git config --get gitlabbook.prefix.feature >/dev/null 2>&1     && \
+	git config --get gitlabbook.prefix.release >/dev/null 2>&1     && \
+	git config --get gitlabbook.prefix.hotfix >/dev/null 2>&1      && \
+	git config --get gitlabbook.prefix.support >/dev/null 2>&1     && \
+	git config --get gitlabbook.prefix.versiontag >/dev/null 2>&1
 }
 
-gitflow_is_initialized() {
-	gitflow_has_master_configured                    && \
-	gitflow_has_develop_configured                   && \
-	[ "$(git config --get gitflow.branch.master)" != "$(git config --get gitflow.branch.develop)" ] && \
-	gitflow_has_prefixes_configured
+gitlabbook_is_initialized() {
+	gitlabbook_has_master_configured                    && \
+	gitlabbook_has_develop_configured                   && \
+	[ "$(git config --get gitlabbook.branch.master)" != "$(git config --get gitlabbook.branch.develop)" ] && \
+	gitlabbook_has_prefixes_configured
 }
 
 # Loading settings that can be overridden using git config
-gitflow_load_settings() {
+gitlabbook_load_settings() {
 	export GIT_CURRENT_REPO_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
 	DOT_GIT_DIR=$(git rev-parse --git-dir)
 	export DOT_GIT_DIR=$(cd "$DOT_GIT_DIR" >/dev/null 2>&1 && pwd)
-	export HOOKS_DIR=$(git config --get gitflow.path.hooks || echo "$DOT_GIT_DIR"/hooks) # the second option is used to support previous versions of git-flow
-	export MASTER_BRANCH=$(git config --get gitflow.branch.master)
-	export DEVELOP_BRANCH=$(git config --get gitflow.branch.develop)
-	export ORIGIN=$(git config --get gitflow.origin || echo origin)
+	export HOOKS_DIR=$(git config --get gitlabbook.path.hooks || echo "$DOT_GIT_DIR"/hooks) # the second option is used to support previous versions of git-labbook
+	export MASTER_BRANCH=$(git config --get gitlabbook.branch.master)
+	export DEVELOP_BRANCH=$(git config --get gitlabbook.branch.develop)
+	export ORIGIN=$(git config --get gitlabbook.origin || echo origin)
 
-	GITFLOW_CONFIG=$DOT_GIT_DIR/gitflow_config
-	if [ -f "$GITFLOW_CONFIG" ]; then # move all settings from old .git/gitflow_config to the local conf.
-		warn "Migrating old \"$GITFLOW_CONFIG\" to the \"--local\" repo config."
-		_config_lines=`git config --list --file="$GITFLOW_CONFIG"`;
+	GITLABBOOK_CONFIG=$DOT_GIT_DIR/gitlabbook_config
+	if [ -f "$GITLABBOOK_CONFIG" ]; then # move all settings from old .git/gitlabbook_config to the local conf.
+		warn "Migrating old \"$GITLABBOOK_CONFIG\" to the \"--local\" repo config."
+		_config_lines=`git config --list --file="$GITLABBOOK_CONFIG"`;
 		for _config_line in ${_config_lines}; do
 			_key=${_config_line%=*}
 			_value=${_config_line#=*}
-			git_do config --local gitflow.${_key} ${_value}
+			git_do config --local gitlabbook.${_key} ${_value}
 		done;
-		mv "$GITFLOW_CONFIG" "$GITFLOW_CONFIG".backup 2>/dev/null
+		mv "$GITLABBOOK_CONFIG" "$GITLABBOOK_CONFIG".backup 2>/dev/null
 	fi
 }
 
 #
-# gitflow_resolve_nameprefix
+# gitlabbook_resolve_nameprefix
 #
 # Inputs:
 # $1 = name prefix to resolve
@@ -333,7 +328,7 @@ gitflow_load_settings() {
 # 1: No match is found.
 # 2: Multiple matches found. These matches are written to stderr
 #
-gitflow_resolve_nameprefix() {
+gitlabbook_resolve_nameprefix() {
 	local name prefix
 	local match matches num_matches
 
@@ -368,17 +363,17 @@ gitflow_resolve_nameprefix() {
 }
 
 #
-# Check if the given branch is a git-flow branch
+# Check if the given branch is a git-labbook branch
 #
-gitflow_is_prefixed_branch() {
+gitlabbook_is_prefixed_branch() {
 	local branch return
 
 	branch=$1
 	case $branch in
-	$(git config --get gitflow.prefix.feature)* | \
-	$(git config --get gitflow.prefix.release)* | \
-	$(git config --get gitflow.prefix.hotfix)*  | \
-	$(git config --get gitflow.prefix.support)* )
+	$(git config --get gitlabbook.prefix.feature)* | \
+	$(git config --get gitlabbook.prefix.release)* | \
+	$(git config --get gitlabbook.prefix.hotfix)*  | \
+	$(git config --get gitlabbook.prefix.support)* )
 		return=0
 		;;
 	*)
@@ -388,66 +383,66 @@ gitflow_is_prefixed_branch() {
 	return $return
 }
 #
-# Update the config with the base of a new git-flow branch.
+# Update the config with the base of a new git-labbook branch.
 #
 # @param $1 Base of the new branch
 # @param $2 Name of the branch
 #
-gitflow_config_set_base_branch() {
+gitlabbook_config_set_base_branch() {
 	local base branch
 
 	base=$1
 	branch=$2
-	$(git_do config --local "gitflow.branch.$branch.base" $base)
+	$(git_do config --local "gitlabbook.branch.$branch.base" $base)
 }
 
 #
-# Get the base of a branch as set by gitflow_set_branch
+# Get the base of a branch as set by gitlabbook_set_branch
 #
 # @param $1 Name of the branch
 # @return string|empty String when a base is found otherwise empty
 #
-gitflow_config_get_base_branch() {
+gitlabbook_config_get_base_branch() {
 	local branch
 
 	branch=$1
-	echo $(git config --local --get "gitflow.branch.$branch.base")
+	echo $(git config --local --get "gitlabbook.branch.$branch.base")
 }
 
 #
-# Remove the section that contains the base of a branch as set by gitflow_set_branch
+# Remove the section that contains the base of a branch as set by gitlabbook_set_branch
 #
 # @param $1 Name of the branch
 #
-gitflow_config_remove_base_section() {
+gitlabbook_config_remove_base_section() {
 	local branch
 
 	branch=$1
-	$(git_do config --local --remove-section "gitflow.branch.$branch" 2>/dev/null)
+	$(git_do config --local --remove-section "gitlabbook.branch.$branch" 2>/dev/null)
 }
 
 #
-# Remove the base of the git-flow branch from the.
+# Remove the base of the git-labbook branch from the.
 # @param $1 Name of the branch
 #
-gitflow_config_remove_base_branch() {
+gitlabbook_config_remove_base_branch() {
 	local base
 
 	base=$1
-	$(git_do config --local --unset "gitflow.branch.$branch.base" 2>/dev/null)
+	$(git_do config --local --unset "gitlabbook.branch.$branch.base" 2>/dev/null)
 }
 
-# gitflow_override_flag_boolean()
+# gitlabbook_override_flag_boolean()
 #
 # Override a boolean flag
 #
 # Param $1: string The name of the config variable e.g. "feature.start.fetch"
 # Param $2: string The flag name
 #
-gitflow_override_flag_boolean() {
+gitlabbook_override_flag_boolean() {
 	local _variable
 
-	_variable=$(git config --bool --get gitflow.$1 2>&1)
+	_variable=$(git config --bool --get gitlabbook.$1 2>&1)
 	case $? in
 	0)
 		[ "${_variable}" = "true" ] && eval "FLAGS_${2}=${FLAGS_TRUE}" || eval "FLAGS_${2}=${FLAGS_FALSE}"
@@ -460,17 +455,17 @@ gitflow_override_flag_boolean() {
 	return ${FLAGS_TRUE}
 }
 
-# gitflow_override_flag_string()
+# gitlabbook_override_flag_string()
 #
 # Override a string flag
 #
 # Param $1: string The name of the config variable e.g. "feature.start.fetch"
 # Param $2: string The flag name
 #
-gitflow_override_flag_string() {
+gitlabbook_override_flag_string() {
 	local _variable
 
-	_variable=$(git config --get gitflow.$1 2>&1)
+	_variable=$(git config --get gitlabbook.$1 2>&1)
 	case $? in
 	0)
 		eval "FLAGS_${2}=\"${_variable}\""
@@ -480,7 +475,7 @@ gitflow_override_flag_string() {
 	return ${FLAGS_TRUE}
 }
 
-# gitflow_create_squash_message()
+# gitlabbook_create_squash_message()
 #
 # Create the squash message, overriding the one generated by git itself
 #
@@ -488,7 +483,7 @@ gitflow_override_flag_string() {
 # Param $2: string The base of the branch that will me merged
 # Param $3: string The branch that will be merged.
 #
-gitflow_create_squash_message() {
+gitlabbook_create_squash_message() {
 	echo Squashed commit of the following:
 	echo
 	echo $1
@@ -499,18 +494,18 @@ gitflow_create_squash_message() {
 #
 # Parameter functions
 #
-gitflow_require_name_arg() {
+gitlabbook_require_name_arg() {
 	if [ "$NAME" = "" ]; then
 		die_help "Missing argument <name>"
 	fi
 }
 
-gitflow_expand_nameprefix_arg() {
+gitlabbook_expand_nameprefix_arg() {
 	local expanded_name exitcode
 
-	gitflow_require_name_arg
+	gitlabbook_require_name_arg
 
-	expanded_name=$(gitflow_resolve_nameprefix "$NAME" "$PREFIX")
+	expanded_name=$(gitlabbook_resolve_nameprefix "$NAME" "$PREFIX")
 	exitcode=$?
 	case $exitcode in
 	0)
@@ -523,18 +518,18 @@ gitflow_expand_nameprefix_arg() {
 	esac
 }
 
-gitflow_require_version_arg() {
+gitlabbook_require_version_arg() {
 	if [ "$VERSION" = "" ]; then
 		die_help "Missing argument <version>"
 	fi
 }
 
-gitflow_expand_versionprefix_arg() {
+gitlabbook_expand_versionprefix_arg() {
 	local expanded_version exitcode
 
-	gitflow_require_version_arg
+	gitlabbook_require_version_arg
 
-	version=$(gitflow_resolve_nameprefix "$VERSION" "$PREFIX")
+	version=$(gitlabbook_resolve_nameprefix "$VERSION" "$PREFIX")
 	exitcode=$?
 	case $exitcode in
 	0)
@@ -548,13 +543,13 @@ gitflow_expand_versionprefix_arg() {
 }
 
 
-gitflow_require_base_arg() {
+gitlabbook_require_base_arg() {
 	if [ "$BASE" = "" ]; then
 		die_help "Missing argument <base>"
 	fi
 }
 
-gitflow_use_current_branch_name() {
+gitlabbook_use_current_branch_name() {
 	local current_branch
 
 	current_branch=$(git_current_branch)
@@ -569,7 +564,7 @@ gitflow_use_current_branch_name() {
 	fi
 }
 
-gitflow_use_current_branch_version() {
+gitlabbook_use_current_branch_version() {
 	local current_branch
 
 	current_branch=$(git_current_branch)
@@ -584,15 +579,15 @@ gitflow_use_current_branch_version() {
 	fi
 }
 #
-# Assertions for use in git-flow subcommands
+# Assertions for use in git-labbook subcommands
 #
 
 require_git_repo() {
 	git rev-parse 2>/dev/null || die "Not a git repository"
 }
 
-require_gitflow_initialized() {
-	gitflow_is_initialized || die "Not a gitflow-enabled repo yet. Please run 'git flow init' first."
+require_gitlabbook_initialized() {
+	gitlabbook_is_initialized || die "Not a gitlabbook-enabled repo yet. Please run 'git labbook init' first."
 }
 
 require_clean_working_tree() {
@@ -673,7 +668,7 @@ git_do() {
 #
 # Looks for a Git hook script called as defined by the first variable
 #
-#     filter-flow-command
+#     filter-labbook-command
 #
 # If such a hook script exists and is executable, it is called with the given
 # positional arguments.
@@ -683,7 +678,7 @@ run_filter_hook() {
 
 	command=$1
 	shift
-	scriptfile="${HOOKS_DIR}/filter-flow-${command}"
+	scriptfile="${HOOKS_DIR}/filter-labbook-${command}"
 	if [ -x $scriptfile ]; then
 		return=`$scriptfile "$@"`
 		if [ $? -eq 127 ]; then
@@ -701,16 +696,16 @@ run_filter_hook() {
 #
 # Looks for a Git hook script called
 #
-#     pre-flow-<subcmd>-<subaction>
+#     pre-labbook-<subcmd>-<subaction>
 #
 # If such a hook script exists and is executable, it is called with the given
-# positional arguments.  If its return code non-zero, the git-flow action is
+# positional arguments.  If its return code non-zero, the git-labbook action is
 # aborted.
 #
 run_pre_hook() {
 	local scriptfile exitcode
 
-	scriptfile="${HOOKS_DIR}/pre-flow-${SUBCOMMAND}-${SUBACTION}"
+	scriptfile="${HOOKS_DIR}/pre-labbook-${SUBCOMMAND}-${SUBACTION}"
 	exitcode=0
 	if [ -x "$scriptfile" ]; then
 		"$scriptfile" "$@"
@@ -727,7 +722,7 @@ run_pre_hook() {
 #
 # Looks for a Git hook script called
 #
-#     post-flow-<subcmd>-<subaction>
+#     post-labbook-<subcmd>-<subaction>
 #
 # If such a hook script exists and is executable, it is called with the given
 # positional arguments.  Its return code is ignored.
@@ -735,7 +730,7 @@ run_pre_hook() {
 run_post_hook() {
 	local scriptfile
 
-	scriptfile="${HOOKS_DIR}/post-flow-${SUBCOMMAND}-${SUBACTION}"
+	scriptfile="${HOOKS_DIR}/post-labbook-${SUBCOMMAND}-${SUBACTION}"
 	if [ -x "$scriptfile" ]; then
 		"$scriptfile" "$@"
 	fi
