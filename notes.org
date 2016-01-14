@@ -425,4 +425,13 @@ echo "[[file:img/gitviz_head.png]]"
 #+RESULTS:
 [[file:img/gitviz_head.png]]
 
+**** What should be done
+The previous emacs-lisp code is quite neat and the explanations on how
+it works in the blog post are precious. Yet, coding in emacs-lisp is
+really not my cup of tea. I would feel more comfortable in perl. :) In
+particular here is what we'll need for the
+- Coloring some specific nodes or branches using some regexp
+- Add the labels/tags and not just the branch names
+- Limiting Commits to Graph and Collapsing History (see [[http://correl.phoenixinquis.net/2015/07/12/git-graphs.html#orgheadline14][blog post]])
+- Change orientation (trivial)
 ** Man pages
