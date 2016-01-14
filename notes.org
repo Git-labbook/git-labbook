@@ -66,7 +66,7 @@
   - Keep "--depth=1" or transfer it to "shallow-pull" for all the git pulls
 
 ** Old script for reverting source modif in xp branch (git_revert.sh):
-#+BEGIN_SRC 
+#+BEGIN_SRC sh
 #!/bin/bash
 # Script for doing a revert all source modifications before merging "exp" branch with main "data" branch
 # Shall always be called from "exp" branch
@@ -140,7 +140,7 @@ echo "DONE: Single anti-commit!"
 rm -f $whole_list
 #+END_SRC
 ** Old script for merging xp branch with data branch (git_merge.sh):
-#+BEGIN_SRC 
+#+BEGIN_SRC sh
 #!/bin/bash
 # Script for doing merging between src(or new_data) and data branches
 # Shall always be called from data branch
@@ -224,7 +224,7 @@ echo "MERGING IS DONE SUCCESSFULLY!"
 
 #+END_SRC
 ** Old script for create an article branch (write_paper.sh):
-#+BEGIN_SRC 
+#+BEGIN_SRC sh
 #!/bin/bash 
 # Script for creating a new article branch with only necessary data
 
