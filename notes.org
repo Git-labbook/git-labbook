@@ -1,0 +1,324 @@
+#+STARTUP: overview indent inlineimages logdrawer
+
+* RR-packaging our git workflow:
+** TODO Commands [0/15]:
+   - [ ] git labbook init:
+     + Naming conventions
+     + Commit to the local "labbook" branch
+     + Create directories src, data, analysis
+     + Commit src branch
+     + Commit data branch and merge with src
+   - [ ] git labbook setup remote url [name]
+     + Synchronising labbook branch
+   - [ ] git labbook src|data pull|push:
+     + Pulling/pushing only the src|data branch
+
+   - [ ] git labbook xp start foo [src] [head] [--from branch|tag] [--commit SHA1]:
+     + Create branch foo or xp_foo
+     + Create directory foo in data folder
+     + Create org entry in Labbook
+     + Commit
+     + Push xp_foo to remote
+   - [ ] git labbook xp pull [foo]
+     + Pulling only current branch
+   - [ ] git labbook xp push
+     + Pushing only current branch
+   - [ ] git labbook xp abort
+     + Checkout src and delete xp branch xp_foo and remote xp_foo?
+   - [ ] git labbook xp finish
+     + Create a revert commit of all the source modifications
+     + Merge xp_foo with the data branch
+     + Pay attention on merging data entries from the Labbook
+   - [ ] git labbook xp rename foo2
+     + Renaming branch locally and remotely 
+     + What happens with the LabBook.org entry-it is also renamed?
+
+   - [ ] git labbook article start foo [--commit SHA1]:
+     + Creating a branch article_foo from data
+     + Delete all the data except the ones with the keyword "foo"
+     + Create TAG article_foo in data branch
+   - [ ] git labbook article merge foo2:
+     + Merging new experiment results from data branch to the article_foo branch
+     + Use TAG article_foo to compare branches
+   - [ ] git labbook article pull [foo]
+     + Pulling only current branch
+   - [ ] git labbook article push
+     + Pushing only current branch
+   - [ ] git labbook article abort
+     + Checkout data and delete article branch article_foo and remote article_foo?
+   - [ ] git labbook article finish
+     + Add a tag "final"?
+     + Something more?
+** Ideas and discussions:
+  - If based on Org-mode files (Labbook.org) we should probably use org-merger, although this creates dependencies: http://orgmode.org/worg/org-contrib/gsoc2012/student-projects/git-merge-tool/manual.html
+  - git labbook article should create a git submodule or not?
+  - Maybe we add a "run_xp.sh" template:
+    + Capturing metadata
+    + Storing everything in a new data_file.org
+    + Checking that everything is commited
+    + Having an "testing" (-t) option
+  - Give a template of the "LabBook.org"
+  - This workflow should work perfectly fine for more than one src branch (for multiple users) right? The source code in data branch might be bad, but this is not a big problem
+  - Keep "--depth=1" or transfer it to "shallow-pull" for all the git pulls
+
+** Old script for reverting source modif in xp branch (git_revert.sh):
+#+BEGIN_SRC 
+#!/bin/bash
+# Script for doing a revert all source modifications before merging "exp" branch with main "data" branch
+# Shall always be called from "exp" branch
+
+set -e # fail fast
+
+# Doing revert only for experimental branches
+whole_list="list.out"
+rm -f $whole_list
+branch=$(git symbolic-ref HEAD)
+echo "Now you are in git branch: ${branch}"
+if [[ "$branch" == master || "$branch" == data ]]; then
+    echo "ERROR: Revert should not be performed for master or data branch!"
+    exit 2
+fi
+
+# Making sure everything is commited
+if git diff-index --quiet HEAD --; then
+    echo "Everything is commited"
+else
+    echo "Warning: It is better to commit everything before doing revert!"
+fi
+
+# Finding commits that need reverting
+all_commits=$(git log --format=format:%H master..HEAD)
+while IFS= read -r commit
+do
+    type=unknown
+    f=$(git diff-tree --no-commit-id --name-only $commit)
+    while IFS= read -r line 
+    do
+	case "$type,$line" in
+	    "unknown,data") type=Data
+		;;
+	    "unknown,"*) type=Src
+		;;
+	    "Src,data") type=error
+		echo "There is a commit with Src and Data together"
+		exit 2
+		;;
+	    "Src,"*)
+		;;
+	    "Data,"*) type=error
+		echo "There is a commit with Src and Data together"
+		exit 3
+		;;
+	    *) type=internal_error
+		;;
+	esac
+    done <<< "$f"
+    echo -e "$type $commit" >> $whole_list
+done <<< "$all_commits"
+
+# Showing all commits
+echo "All commits and their type:"
+cat $whole_list
+
+# Reverting Src commits
+revert_list=$(cat $whole_list | grep "^Src" | cut -d' ' -f 2)
+while IFS= read -r commit
+do
+    git revert -n $commit
+done <<< "$revert_list"
+echo "Revert before merging with data branch"
+
+# Commiting revert-doing one big "anti-commit"
+git commit -am "Revert before merging with data branch-done by git_revert.sh"
+echo "DONE: Single anti-commit!"
+
+# Cleaning up
+rm -f $whole_list
+#+END_SRC
+** Old script for merging xp branch with data branch (git_merge.sh):
+#+BEGIN_SRC 
+#!/bin/bash
+# Script for doing merging between src(or new_data) and data branches
+# Shall always be called from data branch
+
+set -e # fail fast
+
+#################################################################
+# Parsing help
+help_script()
+{
+cat << EOF
+Usage: $0 options
+
+Script for running kernel that measures caches
+
+OPTIONS:
+   -h      Show this message
+   -b      Name of the other branch with whome we are branching
+   -m      Merging with master branch
+EOF
+}
+# Parsing options
+while getopts "b:mh" opt; do
+  case $opt in
+    m)
+      branchname="master"
+      ;;
+    b)
+      branchname=$OPTARG
+      ;;
+    h)
+      help_script
+      exit 4
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      help_script
+      exit 3
+      ;;
+  esac
+done
+
+# Cheking if we are in data branch
+current_branch=$(git symbolic-ref --short HEAD)
+echo "Now you are in git branch: ${current_branch}"
+# Checking the name of the branch is data
+if [[ "$current_branch" != data ]]; then
+    echo "ERROR-cannot do merging if we are not in data branch!"
+    exit 1
+fi
+
+# Checking if everything is commited in this branch
+if git diff-index --quiet HEAD --; then
+    echo "Everything is commited in this branch"
+else
+    echo "ERROR-need to commit everything in this branch before merging!"
+    git status
+    exit 2
+fi
+
+# Checking if there are some source changes
+root=""
+changes=""
+# Getting the common ancestor
+root=$(git merge-base master $branchname)
+set +e # For NULL case
+# Getting the files with differences
+changes=$(git diff --name-only $root $branchname | grep -v data | grep -v LabBook | grep -v .starpu)
+set -e
+if [ -n "$changes" ]; then
+    echo "ERROR-Changes to source/R inside new data branch!"
+    echo $changes
+    echo "Do the revert of source/R changes inside ${branchname}"
+    exit 3
+fi
+
+# Finally merging
+git merge $branchname -s recursive -Xours -m "Merging with $branchname branch"
+
+echo "MERGING IS DONE SUCCESSFULLY!"
+
+#+END_SRC
+** Old script for create an article branch (write_paper.sh):
+#+BEGIN_SRC 
+#!/bin/bash 
+# Script for creating a new article branch with only necessary data
+
+set -e # fail fast
+
+help_script()
+{
+cat << EOF
+Usage: $0 article_name
+
+Don't forget to add input name as a parameter 1
+
+# Script for creating a new article branch with only necessary data
+OPTIONS:
+
+   -h      Show this message
+EOF
+}
+while getopts "h" opt; do
+  case $opt in
+    h)
+      help_script
+      exit 4
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      help_script
+      exit 3
+      ;;
+  esac
+done
+if [[ $# != 1 ]]; then
+    echo "Error!"
+    help_script
+    exit 2
+fi
+
+# Name of the .org tag and future branch
+name=$1
+branch_name="article$name"
+article_name="articles/${name}_article.org"
+labbook="LabBook.org"
+art_template="articles/article_template.org"
+emacs_template="articles/emacs_article_setup.org"
+echo "Creating a new branch for writing $branch_name article.."
+
+# Making sure everything is commited
+if git diff-index --quiet HEAD --; then
+    echo "Everything is commited"
+else
+    echo "Error: It is better to commit everything before creating a new branch"
+    exit 3
+fi
+
+# Create and move to new branch
+git branch $branch_name
+git checkout $branch_name
+
+# Delete source code
+git rm -r --cached src/*
+
+# Find only necessary (useful) data folders
+git rm -r --cached data/*
+folders=$(grep $name: $labbook | cut -d\  -f 2)
+while IFS= read -r f
+do
+    git add data/$f
+done <<< "$folders"
+echo "Removed unnecessary src and data files"
+
+# Commit the branch changes
+git commit -am "Creating a new branch for writing $branch_name article"
+
+# Wait for this part to finish before continuing
+wait
+
+# Adding a git tag for the beginning of the branch
+git tag -a start_$branch_name -m 'Place in data branch from the new branch for the article is started'
+
+# Copying the article template in $labbook
+cat $art_template > $article_name
+
+# Copying information about the data to the article
+echo "* Data               :noexport:" >> $article_name
+while IFS= read -r f
+do
+    sed -n "/^\*\* $f/,/^\*\*\s/p" $labbook | head -n -1 >> $article_name
+done <<< "$folders"
+
+# Copying Emacs setup 
+cat $emacs_template >> $article_name
+
+# Final commit
+git add $article_name
+git commit -m "Creating a template for the article"
+echo "DONE"
+
+#+END_SRC
+** TODO vérifier git submodule de la tête d'une branche
+- [ ] Récupérer le patch écrit
+- [ ] Vérifier qu'il a été rapporté upstream
