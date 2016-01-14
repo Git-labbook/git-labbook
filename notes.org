@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
 #+STARTUP: overview indent inlineimages logdrawer
+#+TITLE:       Notes and TODO list regarding the git labbook workflow
+#+LANGUAGE:    en
+#+TAGS: Arnaud(A) Luka(L) Vincent(V)
 
 * RR-packaging our git workflow:
-** TODO Commands [0/15]:
+** TODO Commands [0/15]:                                           :Vincent:
    - [ ] git labbook init:
      + Naming conventions
      + Commit to the local "labbook" branch
