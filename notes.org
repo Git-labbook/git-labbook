@@ -326,3 +326,103 @@ echo "DONE"
 ** TODO vérifier git submodule de la tête d'une branche
 - [ ] Récupérer le patch écrit
 - [ ] Vérifier qu'il a été rapporté upstream
+* Documentation 
+** Tutorial
+*** TODO Write initial org document using fake commands              :Arnaud:
+*** Note on Visualization
+**** Installing git-graphs and its dependancies
+Stop reinventing the wheel and let's use:
+http://correl.phoenixinquis.net/2015/07/12/git-graphs.html
+
+#+begin_src sh :results output :exports both
+wget https://raw.githubusercontent.com/correl/correl.github.io/master/files/git-graph.el
+#+end_src
+
+After trying to load it I realized it requires some string packages to
+run properly:
+#+begin_src emacs-lisp
+(package-install 's)
+#+end_src
+
+#+RESULTS:
+
+But then it can be easily loaded
+#+begin_src emacs-lisp
+(require 'subr-x)
+(require 's)
+(load-file "git-graph.el")
+#+end_src
+
+#+RESULTS:
+: t
+
+**** Playing with git-graph
+Let's create a fake git (stolen from
+http://correl.phoenixinquis.net/2015/07/12/git-graphs.html).
+
+#+begin_src sh :results output :exports both
+mkdir /tmp/test.git
+cd /tmp/test.git
+git init
+touch README
+git add README
+git commit -m 'initial'
+git commit --allow-empty -m 'first'
+git checkout -b develop
+git commit --allow-empty -m 'second'
+git checkout -b feature-1
+git commit --allow-empty -m 'feature 1'
+git commit --allow-empty -m 'feature 1 again'
+git checkout develop
+git commit --allow-empty -m 'third'
+git checkout -b feature-2
+git commit --allow-empty -m 'feature 2'
+git commit --allow-empty -m 'feature 2 again'
+git checkout develop
+git merge --no-ff feature-2
+git checkout master
+git merge --no-ff develop
+git tag -a 1.0 -m '1.0!'
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Dépôt Git vide initialisé dans /tmp/test.git/.git/
+[master (commit racine) 14f9093] initial
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ create mode 100644 README
+[master b8a5275] first
+[develop c05f56a] second
+[feature-1 d16d075] feature 1
+[feature-1 7503018] feature 1 again
+[develop 0456b6e] third
+[feature-2 0bb4696] feature 2
+[feature-2 e428c23] feature 2 again
+Déjà à jour !
+Merge made by the 'recursive' strategy.
+Déjà à jour !
+Merge made by the 'recursive' strategy.
+#+end_example
+
+Now let's try to plot this
+#+begin_src emacs-lisp :results value :file "output.dot"
+(git-graph/to-graphviz-pretty
+ "git"
+ (git-graph/git-graph-head
+  "/tmp/test.git"
+  "master"))
+#+end_src
+
+#+RESULTS:
+[[file:output.dot]]
+
+
+#+begin_src sh :results output raw :exports both
+dot -Tpng output.dot > img/gitviz_head.png
+echo "[[file:img/gitviz_head.png]]"
+#+end_src
+
+#+RESULTS:
+[[file:img/gitviz_head.png]]
+
+** Man pages
