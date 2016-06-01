@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -ex
+
+rm -rvf sandbox
+mkdir sandbox
+
+git init sandbox
+mkdir sandbox/src
+touch sandbox/src/toto.c
+
+( cd sandbox ; git add src/toto.c ; git commit -m "init commit" )
+./run bin/git-labbook --data-b mydata init
+./run bin/git-labbook --data-b mydata xp start xp1
+
+
