@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -ex
+
+mkdir -p repo
+rm -rvf repo/* 
+rm -rvf repo/.??* 
+
+DATADIR="$(pwd)/data"
+
+mkdir -p repo
+cd repo
+
+git init
+git am $DATADIR/000[1234]-*
+
+git checkout -b xp1 HEAD
+git am $DATADIR/000[56]-*
+
+git checkout master
+git branch data
+git am $DATADIR/000[78]-*
+
+git checkout xp1
+git am $DATADIR/000[9]-*
+
+git checkout data
+git am $DATADIR/001[0]-*
+git tag xp1 xp1
+../../git_merge.sh -b heads/xp1
+
+git checkout master
+git am $DATADIR/001[12345]-*
+
+git checkout -b xp2 HEAD
+git am $DATADIR/001[6]-*
+
+git checkout data
+git am $DATADIR/001[7]-*
+git tag xp2 xp2
+../../git_merge.sh -b heads/xp2
+git am $DATADIR/001[8]-*
+
+git checkout master
+git am $DATADIR/001[9]-*
+git tag stable0.9
+
+git checkout -b xp3 HEAD
+git am $DATADIR/002[01234]-*
+git checkout data
+../../git_merge.sh -b heads/xp3
+git am $DATADIR/002[5]-*
+
+git checkout master
+git am $DATADIR/002[6789]-*

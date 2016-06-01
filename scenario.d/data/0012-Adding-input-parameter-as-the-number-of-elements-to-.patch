@@ -1,0 +1,69 @@
+From f9f87ffb3d3fb598d7e89f8778fb2f595123ba9b Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 17:47:47 +0100
+Subject: [PATCH 12/25] Adding input parameter as the number of elements to
+ sort
+
+
+diff --git a/LabBook.org b/LabBook.org
+index d2f527342c0c9d802c691cf75db6d771bcb99372..73613d07ddceba46b185f8022dd7b9d683386ce5 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -185,6 +185,19 @@ while getopts "tcvh" opt; do
+ done
+ #+end_src
+
++    Getting input parameter (number of elements to sort) from the
++    command line argument.
++
++#+begin_src sh
++shift $((OPTIND - 1))
++NUM=$1
++if [[ $# > 1 ]]; then
++    echo 'ERROR-more than one input parameter'
++    help_script
++    exit 2
++fi
++#+end_src
++
+ ***** Verification
+       Verifying that everything is commited (if this is not a simple
+       test), that we are in the right branch.
+@@ -277,7 +290,7 @@ fi
+
+ #+begin_src sh
+   # Prepare running options
+-  running="$programname"
++  running="$programname $NUM"
+
+   echo "* COMMAND LINE USED FOR RUNNING EXPERIMENT" >> $outputfile
+   echo $running >> $outputfile
+@@ -617,12 +630,21 @@ rm -f $whole_list
+     - Everything that is already in /master/ branch
+     - All the data gathered from previous experimental campaigns and some analysis which compares different experimental sets of results
+
+-** TODO Examples for running scripts
+-   - For running experiments execute
++** Examples for running scripts
++   For running test experiments, just to validate that the script is
++   working as planned (without caring about the actual experimental
++   results).
++
++#+begin_src sh :results output
++./run_xp.sh -t -c -v
++#+end_src
++
++   For executing real experiment, with an input parameter 2000000.
+
+-#+BEGIN_SRC
++#+begin_src sh :results output
++./run_xp.sh -c -v 2000000
++#+end_src
+
+-#+END_SRC
+ ** ChangeLog
+    - Contains important coarse-grain information about the changes on the project.
+    - This section may be redundant if:
+--
+2.8.0.rc3
+

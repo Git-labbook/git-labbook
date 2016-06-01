@@ -1,0 +1,20 @@
+From 8cc0b102bfb072ca0116fe6d10c45b143ee789d2 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Tue, 12 Jan 2016 18:22:13 +0100
+Subject: [PATCH 2/4] Trying to work with Git-LFS
+
+---
+ .gitattributes | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 .gitattributes
+
+diff --git a/.gitattributes b/.gitattributes
+new file mode 100644
+index 0000000..5f13ef0
+--- /dev/null
++++ b/.gitattributes
+@@ -0,0 +1 @@
++*.trace filter=lfs diff=lfs merge=lfs -text
+--
+2.8.1
+

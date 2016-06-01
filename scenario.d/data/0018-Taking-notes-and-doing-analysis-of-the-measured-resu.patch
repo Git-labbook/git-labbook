@@ -1,0 +1,54 @@
+From a93b0519553506412c2223376b9d4073576a772b Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 20:07:31 +0100
+Subject: [PATCH 18/25] Taking notes and doing analysis of the measured results
+
+
+diff --git a/LabBook.org b/LabBook.org
+index 8923dcefe789ddfc6d26584008bd5ff61d6f7531..881bbc8a19c868e514be3b0417dd88eacc5a36a8 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -697,3 +697,22 @@ git log -1
+
+ *** Notes:
+     - This were just some initial experiments to see how the workflow goes
++** xp2						       :TEST:_LUKA:@WINNETOU:
++*** git:
++#+begin_src sh :results output
++git log -1
++#+end_src
++
++#+RESULTS:
++: commit 0ee2175a6a6a7d2db7697b38ca22771d18a01422
++: Merge: 9874eed 7c0d1c8
++: Author: Luka Stanisic <luka.stanisic@imag.fr>
++: Date:   Mon Jan 11 20:00:07 2016 +0100
++:
++:     Merging with xp2 branch
++
++*** Notes:
++    - Experimentation workflow is improved
++    - The performance is measured for several different array sizes (1M, 2M, 4M, 8M and 16M)
++    - Finally we did some [[file:analysis/Comparison.org][analysis]] which provides an adequate plots of the comparing different implementations of Quicksort algorithm
++
+diff --git a/analysis/Comparison.org b/analysis/Comparison.org
+index d8205e1eaa0e3c21dc1f1093f3b3baf82f6597e7..b7923f3008cc83644d3d7992fff92bfa9218f279 100644
+--- a/analysis/Comparison.org
++++ b/analysis/Comparison.org
+@@ -23,8 +23,11 @@ built="$(grep -e "Built-in quicksort took: " $inputfile | cut -d " " -f4)"
+ echo "$num, $seq, $par, $built" >> $outputfile
+ #+END_SRC
+
+-#+call: Extract(inputfile="../data/testing/Test0.org", outputfile="tmp_results") :results silent
+-#+call: Extract(inputfile="../data/testing/Test1.org", outputfile="tmp_results") :results silent
++#+call: Extract(inputfile="../data/xp2/QuickSortData0.org", outputfile="tmp_results") :results silent
++#+call: Extract(inputfile="../data/xp2/QuickSortData1.org", outputfile="tmp_results") :results silent
++#+call: Extract(inputfile="../data/xp2/QuickSortData2.org", outputfile="tmp_results") :results silent
++#+call: Extract(inputfile="../data/xp2/QuickSortData3.org", outputfile="tmp_results") :results silent
++#+call: Extract(inputfile="../data/xp2/QuickSortData4.org", outputfile="tmp_results") :results silent
+
+ * Basic comparison
+
+--
+2.8.0.rc3
+

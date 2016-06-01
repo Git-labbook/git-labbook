@@ -1,0 +1,46 @@
+From f055ec09f7c542e5502d448c2707aaca9814894c Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 15:56:07 +0100
+Subject: [PATCH 09/25] Fixing the error regarding the name of the folder
+ (reverted from commit cda5acb74dcce0797198d58335de07313ceb90f2)
+
+
+diff --git a/LabBook.org b/LabBook.org
+index 1b6dec9668ce202e5acfb78d19a08eea25d4d03d..f6988b7dfe1f0fb2c85cf61815f396f0167133b6 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -192,7 +192,7 @@ done
+ #+begin_src sh
+ # Doing real experiments, not just testing if the code is valid and can be executed
+ if [[ $testing == 0 ]]; then
+-    branch=$(eval basename $(git symbolic-ref HEAD))
++    branch=$(git symbolic-ref HEAD)
+     echo "Now you are in git branch: ${branch}"
+ # Checking the name of the branch is not master
+     if [[ "$branch" == *master* ]]; then
+@@ -209,21 +209,12 @@ if [[ $testing == 0 ]]; then
+ 	exit 1
+     fi
+ fi
+-#+end_src
+-
+-      For real experiments (not tests), data folder will take the name
+-      from the branch. This can be configured differently, but such a
+-      way is the easiest and completely automatic.
+-
+-#+begin_src sh
+ # Name of data folder where to store results if testing
+ if [[ $testing == 1 ]]; then
+     dataname="Test"
+     datafolder="$basename/data/testing"
+-else
+-    datafolder="$basename/data/$branch"
++    mkdir -p $basename/data/testing
+ fi
+-mkdir -p $datafolder
+ #+end_src
+
+       Giving original name with appended with a unique number to the
+--
+2.8.0.rc3
+

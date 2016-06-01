@@ -1,0 +1,55 @@
+From b63e987cb0a03813935b61d243e551c26e2e2ed8 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 14:45:22 +0100
+Subject: [PATCH 04/25] Updating gitignore list
+
+
+diff --git a/.gitignore b/.gitignore
+index bbf313b25987d0d61b1cea33a8e6188501e221ac..768fa0a302e46c5774f7c8f622bef454144985d9 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,32 +1,12 @@
+-# Object files
+-*.o
+-*.ko
+-*.obj
+-*.elf
+-
+-# Precompiled Headers
+-*.gch
+-*.pch
++# Ignore the executable file
++src/parallelQuicksort
+
+-# Libraries
+-*.lib
+-*.a
+-*.la
+-*.lo
+-
+-# Shared objects (inc. Windows DLLs)
+-*.dll
+-*.so
+-*.so.*
+-*.dylib
++# Ignore all object files
++*.o
+
+-# Executables
+-*.exe
+-*.out
+-*.app
+-*.i*86
+-*.x86_64
+-*.hex
++# Ignore scripts that are tangled from laboratory notebook
++run_xp.sh
++get_info.sh
+
+-# Debug files
+-*.dSYM/
++# Ignore all the data inside data/testing folder
++data/testing/*
+--
+2.8.0.rc3
+

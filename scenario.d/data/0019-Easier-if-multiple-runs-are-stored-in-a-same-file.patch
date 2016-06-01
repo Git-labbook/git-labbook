@@ -1,0 +1,262 @@
+From 21308e45f9ee048919ac1e7838c773455fff08d6 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Tue, 12 Jan 2016 16:47:13 +0100
+Subject: [PATCH 19/25] Easier if multiple runs are stored in a same file
+
+
+diff --git a/.gitignore b/.gitignore
+index 01a616b4606d27341e5049f45b04c0e4155563aa..89bc66f516cbecd919daa6ecd1c5ad42b23ee5a2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -12,3 +12,6 @@ git_merge.sh
+
+ # Ignore all the data inside data/testing folder
+ data/testing/*
++
++# Ignoring R file for generating input
++input_generator.R
+diff --git a/LabBook.org b/LabBook.org
+index 18d81d078c19da26b65c0a1ec67db30a89b99efe..9301303ce0e5aec2e09b6539f2b7674ae9fad22f 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -190,14 +190,24 @@ done
+
+ #+begin_src sh
+ shift $((OPTIND - 1))
+-NUM=$1
+-if [[ $# > 1 ]]; then
+-    echo 'ERROR-more than one input parameter'
++RANGE1="-1"
++RANGE2="-1"
++if [[ $# == 1 ]]; then
++   RANGE1=$1
++fi
++if [[ $# == 2 ]]; then
++   RANGE1=$1
++   RANGE2=$2
++fi
++if [[ $# > 2 ]]; then
++    echo 'ERROR-more than two input parameters'
+     help_script
+     exit 2
+ fi
+ #+end_src
+
++#+RESULTS:
++
+ ***** Verification
+       Verifying that everything is commited (if this is not a simple
+       test), that we are in the right branch.
+@@ -256,7 +266,7 @@ outputfile="$datafolder/$dataname${bkup}.org"
+
+ #+begin_src sh
+ # Starting to write output file and capturing all metadata
+-title="Experiment for parallel quicksort of $NUM elements"
++title="Experiment for parallel quicksort"
+ ./get_info.sh -t "$title" $outputfile
+ #+end_src
+
+@@ -284,13 +294,23 @@ else
+ fi
+ #+end_src
+
++***** Design of experiments
++
++      Generating randomized input parameters for the experiment
++      using R.
++
++#+begin_src sh
++rm -f input_values
++Rscript input_generator.R $RANGE1 $RANGE2
++#+end_src
++
+ ***** Running the experiment
+       Preparing and capturing the line with which the experiment will
+       be executed.
+
+ #+begin_src sh
+   # Prepare running options
+-  running="$programname $NUM"
++  running="$programname"
+
+   echo "* COMMAND LINE USED FOR RUNNING EXPERIMENT" >> $outputfile
+   echo $running >> $outputfile
+@@ -309,13 +329,15 @@ fi
+   # In fact only the following line is actually executing the experiment
+   # everything else is a wrapper, but it is very important that it is captured
+   #############################################
+-  eval $running 1> stdout.out 2> stderr.out
++  for NUM in $(cat input_values)
++  do
++    echo "Array size: $NUM" 1>> stdout.out
++    eval $running $NUM 1>> stdout.out 2>> stderr.out
++  done
+   #############################################
+
+   set -e
+   time2=$(date +%s.%N)
+-  echo "* ELAPSED TIME FOR RUNNING THE PROGRAM" >> $outputfile
+-  echo "Elapsed:    $(echo "$time2 - $time1"|bc ) seconds" >> $outputfile
+   echo "* STDERR OUTPUT" >> $outputfile
+   cat stderr.out >> $outputfile
+   if [ ! -s stdout.out ]; then
+@@ -329,12 +351,15 @@ fi
+   fi
+ #+end_src
+
+-    Cleanup.
++    End and cleanup.
+
+ #+begin_src sh
+   # Cleanup & End
++  echo "* ELAPSED TIME FOR RUNNING THE PROGRAM" >> $outputfile
++  echo "Elapsed:    $(echo "$time2 - $time1"|bc ) seconds" >> $outputfile
+   rm -f stdout.out
+   rm -f stderr.out
++  #rm -f input_values
+   cd $basename
+ #+end_src
+
+@@ -609,6 +634,57 @@ echo "DONE: Single anti-commit!"
+ rm -f $whole_list
+ #+end_src
+
++**** TODO input_generator.R
++ :PROPERTIES:
++ :header-args:    :tangle input_generator.R
++ :END:
++
++     The output file containing the array size between the two input
++     arguments will later be used by run_xp. Note that the seed of the
++     random generator, the number of array sizes to test and the
++     number of repetition are constants of the R script, but they
++     could also be its input parameters.
++
++     Constants of the script.
++
++#+begin_src R
++set.seed(42)
++num=4
++rep=5
++# Disabling scientific notation in printing
++options(scipen=999)
++#+end_src
++
++     Reading the input arguments that represent the range.
++
++#+begin_src R
++args <- commandArgs(trailingOnly = TRUE)
++range1<-as.numeric(args[1])
++if (range1==-1)
++  range1<-1000000
++range2<-as.numeric(args[2])
++#+end_src
++
++     Sampling random values from the range. Adding repetitions and
++     again rearranging the vector.
++
++#+begin_src R
++if (range2==-1){
++  x <- rep.int(range1, rep)
++} else{
++  x <- c(range1, range2)
++  x <- append(x, sample(range1:range2, num, replace=F))
++  x <- rep.int(x,rep)
++  x <- x[sample.int(length(x))]
++}
++
++cat(x, file="input_values")
++#+end_src
++
++     Ideally, the order in which different algorithm implementations
++     are executed should be randomized as well, but at this point I
++     don't wish to change the source code file.
++
+ *** src/
+ **** parallelQuicksort.c
+      I copied the code from Arnaud Legrand, which he used for his
+diff --git a/analysis/Comparison.org b/analysis/Comparison.org
+index d8205e1eaa0e3c21dc1f1093f3b3baf82f6597e7..352599926d019983b4526b423d78bc87ef154938 100644
+--- a/analysis/Comparison.org
++++ b/analysis/Comparison.org
+@@ -52,3 +52,54 @@ ggplot(df, aes(x=Size, y=Time, color=factor(Algorithm))) +
+ #+RESULTS:
+ [[file:comparison.png]]
+
++* Multiple runs in a same data file
++** Extracting data
++
++#+begin_src perl :tangle perl_extractor.pl
++use strict;
++
++my($line);
++my($size);
++
++print "Size, Type, Time\n" ;
++while($line=<>) {
++    chomp $line;
++    if($line =~/^Array size: ([\d\.]*)$/) {
++        $size = $1;
++        next;
++    }
++    if($line =~/^(.*) quicksort.*: ([\d\.]*) sec.$/) {
++        print "$size, \"$1\", $2\n" ;
++        next;
++    }
++}
++#+end_src
++
++#+header: :var inputfile="../data/testing/Test0.org" outputfile="tmp_results2"
++#+begin_src sh :results silent
++sed -n '/* STDOUT/,/* ELAPSED TIME/{/* ELAPSED TIME/!p}' $inputfile > tmp
++tail -n +1 tmp > tmp2
++perl perl_extractor.pl < tmp2 > $outputfile
++rm -f tmp tmp2
++#+end_src
++
++** Analysing the measured performance
++
++#+begin_src R :results graphics :session *R* :dir . :exports both :file comparison2.png :width 700 :height 400
++# Reading the data
++df <- read.csv("tmp_results2.csv", header=TRUE)
++
++# Ploting the data using ggplot2
++library(ggplot2)
++ggplot(df, aes(x=Size, y=Time, color=factor(Type))) +
++ geom_point() + stat_summary(fun.y = mean, geom="line", size=2) +
++ theme_bw() + scale_y_continuous(name="Time [s]") +
++ scale_x_continuous(name="Array size") +
++ ggtitle("Comparing different quicksort implementations") +
++ guides(color=guide_legend(title="Implementation of\nthe algorithm"))
++#+end_src
++
++#+RESULTS:
++[[file:comparison2.png]]
++
++
+diff --git a/analysis/perl_extractor.pl b/analysis/perl_extractor.pl
+new file mode 100644
+index 0000000000000000000000000000000000000000..d3c716408249a6f4bad83e1d68d0737a1c3010d9
+--- /dev/null
++++ b/analysis/perl_extractor.pl
+@@ -0,0 +1,17 @@
++use strict;
++
++my($line);
++my($size);
++
++print "Size, Type, Time\n" ;
++while($line=<>) {
++    chomp $line;
++    if($line =~/^Array size: ([\d\.]*)$/) {
++        $size = $1;
++        next;
++    }
++    if($line =~/^(.*) quicksort.*: ([\d\.]*) sec.$/) {
++        print "$size, \"$1\", $2\n" ;
++        next;
++    }
++}
+--
+2.8.0.rc3
+

@@ -1,0 +1,18 @@
+From f445c2ea1f25cac7a41e961ab73b1d12c848e2a9 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <stanisic.luka@gmail.com>
+Date: Mon, 11 Jan 2016 14:39:49 +0100
+Subject: [PATCH 02/25] Update README
+
+
+diff --git a/README.md b/README.md
+index a5503d991ab86ba6ea4e344b3e5013531109a989..0ad3f9bba6ba0207a44ba140f8e019e242165a04 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,2 @@
+-# RR_example
+-An example of how to organize experimental research study using Git and Org-mode
++# Reproducible Research example
++An example of how to organize a reproducible experimental research study using Git and Org-mode.
+--
+2.8.0.rc3
+

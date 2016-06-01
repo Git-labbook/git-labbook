@@ -1,0 +1,26 @@
+From 75339943e7e3650fc58280edec721dcd5abf7a87 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 17:50:54 +0100
+Subject: [PATCH 13/25] fix for the revert script
+
+
+diff --git a/LabBook.org b/LabBook.org
+index 73613d07ddceba46b185f8022dd7b9d683386ce5..bb66df15878662f511d7195340e5003a6687a9d2 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -517,9 +517,10 @@ fi
+
+ #+begin_src sh
+ #!/bin/bash
+-# Script to get machine information before doing the experiment
++# Script for doing a revert all source modifications before merging "exp" branch with main "data" branch
++# Shall always be called from "exp" branch
+
+-set +e # Don't fail fast since some information is maybe not available
++set -e # fail fast
+ #+end_src
+
+ ***** Verification, commit detection and reverting
+--
+2.8.0.rc3
+

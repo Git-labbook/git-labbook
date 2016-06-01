@@ -1,0 +1,36 @@
+From 9874eed0c5b604fbde9597ac0e86ffae5aed1790 Mon Sep 17 00:00:00 2001
+From: Luka Stanisic <luka.stanisic@imag.fr>
+Date: Mon, 11 Jan 2016 19:15:08 +0100
+Subject: [PATCH 17/25] Writing about the xp1 experimental campaign in the
+ laboratory notebook
+
+
+diff --git a/LabBook.org b/LabBook.org
+index 1e781de3ba949d117dd7d97613deb143ed2f691c..77ddeb5b1b777425b76b40539f63cb66450e64b5 100644
+--- a/LabBook.org
++++ b/LabBook.org
+@@ -633,4 +633,20 @@ echo "MERGING IS DONE SUCCESSFULLY!"
+ #+begin_src sh :results output :exports both
+  git tag -n1
+ #+end_src
+-* Experiment results /
++* Experiment results
++** xp1						       :TEST:_LUKA:@WINNETOU:
++*** git:
++#+begin_src sh :results output
++git log -1
++#+end_src
++
++#+RESULTS:
++: commit e0e5b84b3afab6de115c2713cb9d38d4e55841f5
++: Merge: d3034d1 f055ec0
++: Author: Luka Stanisic <luka.stanisic@imag.fr>
++: Date:   Mon Jan 11 17:33:53 2016 +0100
++:
++:     Merging with xp1 branch
++
++*** Notes:
++    - This were just some initial experiments to see how the workflow goes
+--
+2.8.0.rc3
+
