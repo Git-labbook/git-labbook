@@ -1,0 +1,16 @@
+#!/bin/bash
+
+PROGDIR="$(dirname "$1")"
+PROGNAME="$(basename "$1")"
+BASEDIR="$PWD"
+shift
+case "$PROGDIR" in
+/*) ;;
+*) PROGDIR="$PWD/$PROGDIR" ;;
+esac
+
+mkdir -p sandbox
+cd sandbox
+export PERL5LIB="$BASEDIR/lib:$PERL5LIB"
+exec "$PROGDIR/$PROGNAME" "$@"
+

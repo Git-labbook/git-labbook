@@ -1,0 +1,61 @@
+#!/bin/bash
+
+set -e
+
+FILES="META.yml LICENSE README Makefile.PL MANIFEST t/author-pod-syntax.t t/author-pod-coverage.t t/author-critic.t"
+
+error() {
+	echo 1>&2 "$@"
+	exit 1
+}
+
+do_install() {
+	local T="$1"
+	for f in $FILES ; do
+	    local d="$(dirname "$f")"
+	    if ! test -f "$T/$f" ; then
+		error "Missing file '$T/$f'"
+		#echo 1>&2 "Missing file '$T/$f'"
+		#continue
+	    fi
+	    if [ ! -d "$d" ]; then
+		mkdir -vp "$d"
+	    fi
+	    cp -av "$T/$f" "$f"
+	done
+}
+
+do_remove() {
+	for f in $FILES ; do
+	    rm -fv "$f"
+	done
+}
+
+TARGET=
+ACTION=
+
+while [ $# != 0 ]; do
+    case "$1" in
+	--target) TARGET="$2" ; shift ;;
+	install) ACTION=install ;;
+	remove) ACTION=remove ;;
+	*) error "What to do with '$1'?" ;;
+    esac
+    shift
+done
+
+case "$ACTION" in
+    "") error "No action specified" ;;
+    install)
+	case "$TARGET" in
+	"") error "Missing target for action '$ACTION'" ;;
+	esac
+	if ! test -d "$TARGET" ; then
+	    error "Target '$TARGET' is not a directory"
+	fi
+	do_install "$TARGET" ;;
+    remove)
+	do_remove ;;
+    *) error "Unknown action '$ACTION'" ;;
+esac
+
