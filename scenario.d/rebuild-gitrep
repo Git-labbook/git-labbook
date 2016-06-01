@@ -45,11 +45,27 @@ git checkout master
 git am $DATADIR/001[9]-*
 git tag stable0.9
 
+#############################################
+# Launching xp3 experiments on another machine
+cd ..
+rm -rvf repoMachine2/* 
+rm -rvf repoMachine2/.??*
+
+git clone -b master --single-branch repo repoMachine2
+
+cd repoMachine2
+
 git checkout -b xp3 HEAD
 git am $DATADIR/002[01234]-*
+git push -u origin xp3
+
+cd ..
+cd repo
+
 git checkout data
 ../git_merge.sh -b heads/xp3
 git am $DATADIR/002[5]-*
+#############################################
 
 git checkout master
 git am $DATADIR/002[6]-*
