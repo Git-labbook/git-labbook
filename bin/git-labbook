@@ -199,7 +199,7 @@ usage(1) unless !$cmd->has_subcmds;
 #Git::SVN::init_vars();
 eval {
     #Git::SVN::verify_remotes_sanity();
-    $cmd->run();
+    $cmd->run(@ARGV);
     #post_fetch_checkout();
 };
 fatal $@ if $@;

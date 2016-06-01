@@ -139,7 +139,7 @@ sub displayname {
 sub run {
     my $self = shift;
 
-    return $self->code->($self, $self->_cmds->ARGV);
+    return $self->code->($self, @_);
 }
 
 sub BUILD {
