@@ -30,20 +30,26 @@
    - [ ] git labbook xp abort
      + Checkout src and delete xp branch xp_foo and remote xp_foo?
    - [ ] git labbook xp finish
-     + Create a revert commit of all the source modifications
+     + Create a revert commit of all the source modifications. Or dont.
      + Merge xp_foo with the data branch
      + Pay attention on merging data entries from the Labbook
+     + Put a git tag on xp_foo
+     + Delete xp_foo branch (it can still be accessed via tag)
    - [ ] git labbook xp rename foo2
      + Renaming branch locally and remotely 
      + What happens with the LabBook.org entry-it is also renamed?
+     + This command is really not that important
 
    - [ ] git labbook article start foo [--commit SHA1]:
      + Creating a branch article_foo from data
-     + Delete all the data except the ones with the keyword "foo"
-     + Create TAG article_foo in data branch
+     + Delete all the data except the ones with the keyword (orgmode TAG) "foo"
+     + Delete whole src/, but not the analysis/ folder
+     + Copying information about the data to the article
+     + Commit
+     + Add a git tag start_article_foo
    - [ ] git labbook article merge foo2:
      + Merging new experiment results from data branch to the article_foo branch
-     + Use TAG article_foo to compare branches
+     + Use tag start_article_foo to compare branches
    - [ ] git labbook article pull [foo]
      + Pulling only current branch
    - [ ] git labbook article push
@@ -51,8 +57,8 @@
    - [ ] git labbook article abort
      + Checkout data and delete article branch article_foo and remote article_foo?
    - [ ] git labbook article finish
-     + Add a tag "final"?
-     + Something more?
+     + Add a tag "final_version_X", where X corresponds to the number of "final_version_X" tags between this one and the tag start_article_foo + 1. This is just in case there multiple final versions, and thus multiple git labbook article finish calls
+
 ** Ideas and discussions:
   - If based on Org-mode files (Labbook.org) we should probably use org-merger, although this creates dependencies: http://orgmode.org/worg/org-contrib/gsoc2012/student-projects/git-merge-tool/manual.html
   - git labbook article should create a git submodule or not?
