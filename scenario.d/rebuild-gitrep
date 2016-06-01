@@ -52,4 +52,4 @@ git checkout data
 git am $DATADIR/002[5]-*
 
 git checkout master
-git am $DATADIR/002[6789]-*
+git am $DATADIR/002[6]-*
