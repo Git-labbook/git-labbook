@@ -13,6 +13,9 @@ DATADIR="$(pwd)/data"
 export PATH="$(pwd)/../blib/script:$(pwd)/../bin:$PATH"
 export PERL5LIB="$(pwd)/../blib/lib:$(pwd)/../lib:$PATH"
 
+# check that options are correctly connected to config variables
+git-labbook help
+
 mkdir -p repo
 cd repo
 

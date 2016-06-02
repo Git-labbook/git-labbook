@@ -75,60 +75,71 @@ my ($_help, $_version);
 
 $_q ||= 0;
 
-my %layout_opts = (
-    'labbook-file-name=s' => \&store_config,
-    'data-branch-name=s' => \&store_config,
-    'data-dir-name=s' => \&store_config,
-    'analysis-dir-name=s' => \&store_config,
-    );
+my %options = (
+    'all' => {
+	'labbook-file-name' => {
+	    'getopt' => 's',
+	    'config' => 'labbookfile',
+	    'desc' => 'name of the labbook file',
+	},
+	'data-branch-name' => {
+	    'getopt' => 's',
+	    'config' => 'databranch',
+	    'desc' => 'branch name for the data branch',
+	},
+	'data-dir-name' => {
+	    'getopt' => 's',
+	    'config' => 'datadir',
+	    'desc' => 'directory with experiment results',
+	},
+	'analysis-dir-name' => {
+	    'getopt' => 's',
+	    'config' => 'analysisdir',
+	    'desc' => 'directory with analysis material', 
+	},
+    },
+    'init' => {
+    },
+    'xp-start' => {
+	'xp-branch-name' => {
+	    'getopt' => 's',
+	    'salias' => 'b',
+	    'alias' => 'branch',
+	    'config' => 'xpbranch',
+	    'desc' => 'branch name template for experiments',
+	},
+	'labbook-entry' => {
+	    'getopt' => '!',
+	    'config' => 'labbookentry',
+	    'desc' => 'add an entry in the labbook',
+	},
+    },
+);    
 
-my %init_opts = (
-    %layout_opts,
+my $cmds = new Git::LabBook::Cmds(
+    'options' => \%options,
     );
-
-my %xp_opts = (
-    %layout_opts,
-    'xp-branch-name|b=s' => \&store_config,
-    );
-
-my %xp_start_opts = (
-    %xp_opts,
-    'labbook-entry!' => \&store_config,
-    );
-
-my $cmds = new Git::LabBook::Cmds();
-my $labbook = new Git::LabBook();
 
 $cmds->register(
     'name' => 'help',
     'code' => sub {},
     'desc' => "Get a quick help on commands",
-    'opts' => \%init_opts,
     )->register(
     'name' => 'init',
     'code' => \&cmd_init,
     'desc' => "Initialize a repo for labbook usage",
-    'opts' => \%init_opts,
     )->register(
     'name' => 'xp',
     'has-subcmds' => 1,
     'desc' => "manage an experiment (requires subcommand)",
-    'opts' => \%xp_opts,
     )->register(
     'main-cmd' => 'xp',
     'name' => 'start',    
     'code' => \&cmd_xp_start,
     'desc' => "start a new experiment (requires a name)",
-    'opts' => { %xp_opts, %xp_start_opts },
     );
 
-sub store_config {
-    my $name = shift;
-    my $value = shift;
-
-    #print STDERR "Setting $name to $value\n";
-    $labbook->set($name, $value);
-}
+my $labbook = new Git::LabBook();
 
 package FakeTerm;  
 sub new {          
@@ -184,14 +195,14 @@ if ($cmds->cmd_parsed) {
 }
 
 my %opts=();
-%opts = %{$cmd->opts} if (defined $cmd);
+%opts = %{$cmd->opts($labbook)} if (defined $cmd);
 
 read_git_config(\%opts);
 #if ($cmd && ($cmd eq 'log' || $cmd eq 'blame')) {
 #        Getopt::Long::Configure('pass_through');
 #}
 @ARGV=$cmds->ARGV;
-my $rv = GetOptions(%opts, 'h|H' => \$_help, 'version|V' => \$_version);
+my $rv = GetOptions(%opts, 'help|H' => \$_help, 'version|V' => \$_version);
 exit 1 if (!$rv && $cmd);
 
 usage(0) if $_help;
@@ -216,21 +227,47 @@ sub usage {
 git-labbook - manage a labbook with git
 usage: git labbook <command> [subcommand] [options] [arguments]\n
 
-    print $fd "Available commands:\n" unless $cmd;
+
+    my $print_opts = sub {
+	my $grp = shift;
+	my $head = shift;
+	my $opts = $cmds->opts($labbook, $grp);
+	print $fd "  $head\n" if defined($head) && scalar(@{$opts});
+	foreach my $opt (@{$opts}) {
+	    my $t = $opt->{'getopt'};
+	    my $x = $t eq 's' ? '<arg>' : $t eq 'i' ? '<num>' : '';
+	    printf $fd "% 4s %-30s%s (default: %s)\n", ' ', join(', ', @{$opt->{'names'}}).
+	    " $x ", $opt->{'desc'}, $opt->{'default'}; 
+	}
+    };
+
+    if ($cmd) {
+	print $fd '  ',pack('A17',$cmd->displayname),$cmd->desc,"\n   options:\n";
+	$print_opts->();
+	if ($cmd->does('parent')) {
+	    $print_opts->($cmd->parent->fullname);
+	}
+	$print_opts->($cmd->fullname);
+	exit $exit;
+    }
+
+    print $fd "  Common options:\n";
+    $print_opts->();
+    print $fd "Available commands:\n";
     
     foreach (sort { $a->fullname cmp $b->fullname } $cmds->all_cmds) {
-	next if $cmd && $cmd ne $_;
 	#next if $_->has_subcmds && !defined($cmd);
 	print $fd '  ',pack('A17',$_->displayname),$_->desc,"\n";
-	foreach (sort keys %{$_->opts}) {
-	    # mixed-case options are for .git/config only
-	    next if /[A-Z]/ && /^[a-z]+$/i;
-	    # prints out arguments as they should be passed:
-	    my $x = s#[:=]s$## ? '<arg>' : s#[:=]i$## ? '<num>' : '';
-	    print $fd ' ' x 21, join(', ', map { length $_ > 1 ?
-						     "--$_" : "-$_" }
-				     split /\|/,$_)," $x\n";
-	}
+	#foreach (sort keys %{$_->opts}) {
+	#    # mixed-case options are for .git/config only
+	#    next if /[A-Z]/ && /^[a-z]+$/i;
+	#    # prints out arguments as they should be passed:
+	#    my $x = s#[:=]s$## ? '<arg>' : s#[:=]i$## ? '<num>' : '';
+	#    print $fd ' ' x 21, join(', ', map { length $_ > 1 ?
+	#					     "--$_" : "-$_" }
+	#			     split /\|/,$_)," $x\n";
+	#}
+	$print_opts->($_->fullname, " options:");
     }
     exit $exit;
 }

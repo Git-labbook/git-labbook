@@ -2,6 +2,13 @@ package Git::LabBook::Cmds;
 use Moose;
 use namespace::sweep;
 
+has '_cmd_options' => (
+    is       => 'ro',
+    isa      => 'HashRef',
+    required => 1,
+    init_arg => 'options',
+    );
+
 has '_cmds' => (
     traits   => ['Hash'],
     is       => 'ro',
@@ -37,7 +44,6 @@ has '_ARGV' => (
 	_add_args => 'push',
     }
     );
-    
     
 sub register {
     my $self = shift;
@@ -80,6 +86,37 @@ sub parse {
     $self->_add_args(@ARGV);
 }
 
+sub opts {
+    my $self = shift;
+    my $labbook = shift;
+    my $group = shift;
+    my @opts=();
+
+    my $opts = $self->_cmd_options->{$group // 'all'};
+    return \@opts if not defined($opts);
+
+    foreach my $optname (sort keys %{$opts}) {
+	my $opt = $opts->{$optname};
+	my $boolopt = $opt->{'getopt'} eq '!' ? '[no-]' : '';
+	my @names = map {
+	    "--$boolopt$_"
+	} ($optname, @{$opt->{'aliases'} // []});
+	push @names, "-".$opt->{'salias'} if exists($opt->{'salias'});
+	my $config = $opt->{'config'};
+	my $o = {
+	    desc => $opt->{'desc'} // '',
+	    names => \@names,
+	    getopt => $opt->{'getopt'},
+	    default => $labbook->$config,
+	};
+	if ($opt->{'getopt'} eq '!') {
+	    $o->{'default'} = $o->{'default'} ? 'true' : 'false';
+	}
+	push @opts, $o;
+    }
+    return \@opts;
+}
+
 1;
 
 package Git::LabBook::Cmd;
@@ -111,10 +148,12 @@ has 'code' => (
     predicate => '_has_code',
     );
 
-has 'opts' => (
+has '_opts' => (
     is      => 'ro',
     isa      => 'HashRef',
+    required => 1,
     default => sub { {} },
+    init_arg => 'opts',
     );
 
 has 'has_subcmds' => (
@@ -151,6 +190,48 @@ sub BUILD {
     if (!$self->_has_code && !$self->has_subcmds) {
 	die 'Missing code for '.$self->fullname;
     }
+}
+
+sub opts {
+    my $self = shift;
+    my $labbook = shift;
+    my %opts = ();
+
+    my @groups = ('all');
+    if ($self->does('parent')) {
+	push @groups, $self->parent->fullname;
+    }
+    push @groups, $self->fullname;
+
+    foreach my $grp (@groups) {
+	my $gopts = $self->_cmds->_cmd_options->{$grp};
+	next if not defined($grp);
+
+	foreach my $optname (keys %{$gopts}) {
+	    my $key = $optname;
+	    my $opt = $gopts->{$key};
+	    my $salias = $opt->{'salias'};
+	    $key .= '|'.$salias if defined($salias);
+	    my $getopt = $opt->{'getopt'};
+	    if (!defined($getopt)) {
+		die "No getopt type for $optname option of $grp";
+	    }
+	    if ($getopt eq 's') {
+		$key .= '=s';
+	    } elsif ($getopt eq '!') {
+		$key .= '!';
+	    } else {
+		die "Invalid getopt type $getopt for $optname option of $grp";
+	    }
+	    my $config = $opt->{'config'};
+	    $opts{$key} = sub {
+		my $name = shift;
+		my $value = shift;
+		$labbook->set($config, $value);
+	    };
+	}
+    }
+    return \%opts;
 }
 
 1;

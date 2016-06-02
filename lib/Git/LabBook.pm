@@ -67,12 +67,9 @@ around 'xpbranch' => sub {
     my $orig = shift;
     my $self = shift;
 
-    die "Missing experiment name"
-	unless @_;
-
     my $xpname = shift;
     my $branch=$self->$orig();
-    $branch =~ s/%s/$xpname/;
+    $branch =~ s/%s/$xpname/ if defined($xpname);
     return $branch;
 };
 
