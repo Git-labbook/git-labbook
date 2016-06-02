@@ -14,11 +14,13 @@ cd repo
 git init
 git am $DATADIR/000[1234]-*
 
-git checkout -b xp1 HEAD
+# git-labbook init
+
+git checkout -b xp1 HEAD # git-labbook xp start xp1
 git am $DATADIR/000[56]-*
 
 git checkout master
-git branch data
+git branch data # no need for this one, as it is already created with git-labbook init
 git am $DATADIR/000[78]-*
 
 git checkout xp1
@@ -26,19 +28,23 @@ git am $DATADIR/000[9]-*
 
 git checkout data
 git am $DATADIR/001[0]-*
-git tag xp1 xp1
-../git_merge.sh -b heads/xp1
+# git checkout xp1
+# git-labbook xp finish
+git tag xp1 xp1 # no need for this one, as it is already done with git-labbook xp finish
+../git_merge.sh -b heads/xp1 # no need for this one, as it is already done with git-labbook xp finish
 
 git checkout master
 git am $DATADIR/001[12345]-*
 
-git checkout -b xp2 HEAD
+git checkout -b xp2 HEAD # git-labbook xp start xp2
 git am $DATADIR/001[6]-*
 
 git checkout data
 git am $DATADIR/001[7]-*
-git tag xp2 xp2
-../git_merge.sh -b heads/xp2
+# git checkout xp2
+# git-labbook xp finish
+git tag xp2 xp2 # no need for this one, as it is already done with git-labbook xp finish
+../git_merge.sh -b heads/xp2 # no need for this one, as it is already done with git-labbook xp finish
 git am $DATADIR/001[8]-*
 
 git checkout master
@@ -51,19 +57,21 @@ cd ..
 rm -rvf repoMachine2/* 
 rm -rvf repoMachine2/.??*
 
-git clone -b master --single-branch repo repoMachine2
+git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git-labbook clone src or something similar
 
 cd repoMachine2
 
-git checkout -b xp3 HEAD
+git checkout -b xp3 HEAD # git-labbook xp start xp2
 git am $DATADIR/002[01234]-*
-git push -u origin xp3
+git push -u origin xp3 # git-labbook xp push
 
 cd ..
 cd repo
 
-git checkout data
-../git_merge.sh -b heads/xp3
+# git checkout xp3
+# git-labbook xp finish
+git checkout data # no need for this one, as it is already done with git-labbook xp finish
+../git_merge.sh -b heads/xp3 # no need for this one, as it is already done with git-labbook xp finish
 git am $DATADIR/002[5]-*
 #############################################
 
