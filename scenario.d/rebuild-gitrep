@@ -4,9 +4,9 @@ set -ex
 
 mkdir -p repo
 rm -rvf repo/* 
-rm -rvf repo/.??* 
+rm -rf repo/.??* 
 rm -rvf repoMachine2/*
-rm -rvf repoMachine2/.??*
+rm -rf repoMachine2/.??*
 
 
 DATADIR="$(pwd)/data"
@@ -35,23 +35,22 @@ git am $DATADIR/000[9]-*
 
 git checkout data
 git am $DATADIR/001[0]-*
-# git checkout xp1
-# git-labbook xp finish
-git tag xp1 xp1 # no need for this one, as it is already done with git-labbook xp finish
-../git_merge.sh -b heads/xp1 # no need for this one, as it is already done with git-labbook xp finish
+
+git checkout xp1
+git-labbook xp finish
 
 git checkout master
 git am $DATADIR/001[12345]-*
 
-git checkout -b xp2 HEAD # git-labbook xp start xp2
+git-labbook xp start xp2
 git am $DATADIR/001[6]-*
 
 git checkout data
 git am $DATADIR/001[7]-*
-# git checkout xp2
-# git-labbook xp finish
-git tag xp2 xp2 # no need for this one, as it is already done with git-labbook xp finish
-../git_merge.sh -b heads/xp2 # no need for this one, as it is already done with git-labbook xp finish
+
+git checkout xp/xp2
+git-labbook xp finish
+
 git am $DATADIR/001[8]-*
 
 git checkout master
@@ -66,17 +65,17 @@ git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git
 
 cd repoMachine2
 
-git checkout -b xp3 HEAD # git-labbook xp start xp2
+git-labbook xp start xp3 -b xp3 --no-labbook-entry
 git am $DATADIR/002[01234]-*
 git push -u origin xp3 # git-labbook xp push
 
 cd ..
 cd repo
 
-# git checkout xp3
-# git-labbook xp finish
-git checkout data # no need for this one, as it is already done with git-labbook xp finish
-../git_merge.sh -b heads/xp3 # no need for this one, as it is already done with git-labbook xp finish
+git checkout xp3
+git-labbook xp finish
+#git checkout data # no need for this one, as it is already done with git-labbook xp finish
+#../git_merge.sh -b heads/xp3 # no need for this one, as it is already done with git-labbook xp finish
 git am $DATADIR/002[5]-*
 #############################################
 

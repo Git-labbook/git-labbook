@@ -104,7 +104,7 @@ my %options = (
 	'xp-branch-name' => {
 	    'getopt' => 's',
 	    'salias' => 'b',
-	    'alias' => 'branch',
+	    'aliases' => ['branch'],
 	    'config' => 'xpbranch',
 	    'desc' => 'branch name template for experiments',
 	},
@@ -112,6 +112,15 @@ my %options = (
 	    'getopt' => '!',
 	    'config' => 'labbookentry',
 	    'desc' => 'add an entry in the labbook',
+	},
+    },
+    'xp-finish' => {
+	'xp-tag-name' => {
+	    'getopt' => 's',
+	    'salias' => 't',
+	    'aliases' => ['tag'],
+	    'config' => 'xptag',
+	    'desc' => 'tag name template for experiments',
 	},
     },
 );    
@@ -137,6 +146,11 @@ $cmds->register(
     'name' => 'start',    
     'code' => \&cmd_xp_start,
     'desc' => "start a new experiment (requires a name)",
+    )->register(
+    'main-cmd' => 'xp',
+    'name' => 'finish',    
+    'code' => \&cmd_xp_finish,
+    'desc' => "close the current experiment",
     );
 
 my $labbook = new Git::LabBook();
@@ -294,8 +308,14 @@ sub cmd_init {
 	command_noisy(qw/add/, $labbookfile);
 	command_noisy(qw/commit -m/, "labbook initialized");
     }
-    command_noisy('branch', $labbook->databranch);
-    
+    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
+    command_noisy('checkout', '-b', $labbook->databranch);
+    my $labbookstate=$labbook->labbookstate;
+    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state data/);
+    command_noisy(qw/add/, $labbookstate);
+    command_noisy(qw/commit -m/, "Data branch started");
+    command_noisy(qw/symbolic-ref -m/, "labbook: switch back to previous point", 'HEAD', $cur_ref);
+    command_noisy(qw/reset --hard HEAD/);
 }
 
 sub cmd_xp_start {
@@ -323,6 +343,35 @@ sub cmd_xp_start {
     command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
     command_noisy(qw/add/, $labbookstate);
     command_noisy(qw/commit -m/, "Experiment $name started");
+}
+
+sub cmd_xp_finish {
+    my $cmd = shift;
+
+    my $labbookstate=$labbook->labbookstate;
+
+    my ($state,$name);
+    eval {
+	$state = command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.state/);
+	$name = command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
+    };
+    if (!defined($state)) {
+	fatal "E: You are not in an experiment (no state)";
+    }
+    if ($state ne 'xp') {
+	fatal "E: You are not in an experiment (current state: $state)";
+    }
+    if (!defined($name) || $name eq '') {
+	fatal "E: The current experiment has no registered name";
+    }
+
+    my $xptag=$labbook->xptag($name);
+    command_noisy('tag', $xptag);
+
+    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
+    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
+    command_noisy('checkout', $labbook->databranch);
+    command_noisy(qw/merge -s recursive -Xours -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
 }
 
 ########################### utility functions #########################
