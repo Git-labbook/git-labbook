@@ -9,7 +9,7 @@ use Git::LabBook::ConfigAttribute;
 use Path::Class;
 
 has_config_file 'labbookstate' => (
-    default => file('.labbook-state'),
+    default => file('.gitlabbook-state'),
     );
 
 has_config_file 'labbookfile' => (
