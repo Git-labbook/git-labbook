@@ -79,6 +79,7 @@ my %layout_opts = (
     'labbook-file-name=s' => \&store_config,
     'data-branch-name=s' => \&store_config,
     'data-dir-name=s' => \&store_config,
+    'analysis-dir-name=s' => \&store_config,
     );
 
 my %init_opts = (
