@@ -88,10 +88,12 @@ my %init_opts = (
 
 my %xp_opts = (
     %layout_opts,
+    'xp-branch-name|b=s' => \&store_config,
     );
 
 my %xp_start_opts = (
     %xp_opts,
+    'labbook-entry!' => \&store_config,
     );
 
 my $cmds = new Git::LabBook::Cmds();
@@ -268,14 +270,21 @@ sub cmd_xp_start {
     }
 
     ensure_clean("Cannot start a new experiment with a dirty index");
-    command_noisy('checkout', '-b', "xp_".$name);
+    my $xpbranch=$labbook->xpbranch($name);
+    command_noisy('checkout', '-b', $xpbranch);
     my $datadir=dir($labbook->datadir, $name);
     $datadir->mkpath;
-    my $labbookfile = $labbook->labbookfile;
-    my $fh=$labbookfile->opena;
-    print $fh "** $name\n";
-    $fh->close();
-    command_noisy(qw/add/, $labbookfile);
+    if ($labbook->labbookentry) {
+	my $labbookfile = $labbook->labbookfile;
+	my $fh=$labbookfile->opena;
+	print $fh "** $name\n";
+	$fh->close();
+	command_noisy(qw/add/, $labbookfile);
+    }
+    my $labbookstate=$labbook->labbookstate;
+    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state xp/);
+    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
+    command_noisy(qw/add/, $labbookstate);
     command_noisy(qw/commit -m/, "Experiment $name started");
 }
 
