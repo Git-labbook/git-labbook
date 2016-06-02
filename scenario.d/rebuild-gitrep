@@ -10,7 +10,7 @@ rm -rf repoMachine2/.??*
 
 
 DATADIR="$(pwd)/data"
-export PATH="$(pwd)/../blib/script:$(pwd)/../bin:$PATH"
+export PATH="$(pwd)/../blib/script:$(pwd)/../bin:/home/vdanjean/debian/mainteneur/org-merge-driver/upstream/org-merge-driver/build/src:$PATH"
 export PERL5LIB="$(pwd)/../blib/lib:$(pwd)/../lib:$PATH"
 
 # check that options are correctly connected to config variables

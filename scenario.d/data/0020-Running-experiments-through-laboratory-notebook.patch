@@ -13,7 +13,7 @@ index 9301303ce0e5aec2e09b6539f2b7674ae9fad22f..1c96e5c7d6f777e017ac4b0e21e69fb3
   git tag -n1
  #+end_src
 -* Experiment results /
-+* Experiment results
++* Experiment results /
 +** xp3
 +*** git:
 +#+begin_src sh :results output

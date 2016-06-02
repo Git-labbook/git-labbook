@@ -23,6 +23,7 @@ use vars qw/  $sha1 $sha1_short
 use File::Basename qw/dirname basename/;
 use File::Path qw/mkpath/;
 use File::Spec;
+use File::Copy;
 use Getopt::Long qw/:config gnu_getopt no_ignore_case auto_abbrev/;
 use Memoize;
 use Path::Class;
@@ -59,6 +60,8 @@ BEGIN {
 my $cmd_dir_prefix = eval {
         command_oneline([qw/rev-parse --show-prefix/], STDERR => 0)
 } || '';
+
+print STDERR "RUNNIG: '", join("' '", "git-labbook", @ARGV), "'\n";
 
 #$sha1 = qr/[a-f\d]{40}/;
 #$sha1_short = qr/[a-f\d]{4,40}/;
@@ -151,6 +154,10 @@ $cmds->register(
     'name' => 'finish',    
     'code' => \&cmd_xp_finish,
     'desc' => "close the current experiment",
+    )->register(
+    'name' => '_merge',
+    'code' => \&cmd__merge,
+    'desc' => "Internal merge driver for git-labbook specific files",
     );
 
 my $labbook = new Git::LabBook();
@@ -300,6 +307,18 @@ sub cmd_init {
     $datadir->mkpath;
     $analysisdir->mkpath;
     my $labbookfile=$labbook->labbookfile;
+    {
+	my $fh=file('.gitattributes')->opena;
+	print $fh "/", $labbook->labbookstate, " merge=gitlabbookmerge\n";
+	print $fh "/", $labbookfile, " merge=gitlabbookmerge\n";
+	$fh->close();
+	command_noisy(qw/add .gitattributes /);
+	
+	command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.name/, "Git LabBook specific merge driver");
+	command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.driver/, "git-labbook _merge -- %O %A %B %P");
+	
+	command_noisy(qw/commit -m/, "labbook setup");
+    }
     if (! $labbookfile->stat()) {
 	my $fh=$labbookfile->openw;
 	print $fh "* Documentation\n";
@@ -307,6 +326,7 @@ sub cmd_init {
 	$fh->close();
 	command_noisy(qw/add/, $labbookfile);
 	command_noisy(qw/commit -m/, "labbook initialized");
+
     }
     my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
     command_noisy('checkout', '-b', $labbook->databranch);
@@ -365,13 +385,34 @@ sub cmd_xp_finish {
 	fatal "E: The current experiment has no registered name";
     }
 
+    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
+    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
+
     my $xptag=$labbook->xptag($name);
     command_noisy('tag', $xptag);
 
-    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
-    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
     command_noisy('checkout', $labbook->databranch);
-    command_noisy(qw/merge -s recursive -Xours -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
+    command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
+}
+
+sub cmd__merge {
+    my $cmd = shift;
+    my $fancestor = shift;
+    my $fcurrent = shift;
+    my $fother = shift;
+    my $path = shift;
+
+    if ($path eq $labbook->labbookstate) {
+	copy($fcurrent, $fancestor) or die "Copy failed: $!";
+	return;
+    }
+    if ($path eq $labbook->labbookfile) {
+	system("org-merge-driver", $fancestor, $fcurrent, $fother, "tmpfile") == 0
+	    or fatal "E: cannot merge $path";
+	move("tmpfile", $fancestor);
+	return;
+    }
+    fatal "E: git-labbook internal driver cannot be invocked on '$path' file";
 }
 
 ########################### utility functions #########################
