@@ -24,7 +24,7 @@ git am $DATADIR/000[1234]-*
 
 git-labbook init
 
-git-labbook xp start xp1 -b xp1 --no-labbook-entry
+git-labbook xp start xp1 --branch xp1 --no-labbook-entry
 git am $DATADIR/000[56]-*
 
 git checkout master

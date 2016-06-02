@@ -208,9 +208,9 @@ sub opts {
 	next if not defined($grp);
 
 	foreach my $optname (keys %{$gopts}) {
-	    my $key = $optname;
-	    my $opt = $gopts->{$key};
+	    my $opt = $gopts->{$optname};
 	    my $salias = $opt->{'salias'};
+	    my $key = join('|', $optname, @{$opt->{'aliases'} // [] });
 	    $key .= '|'.$salias if defined($salias);
 	    my $getopt = $opt->{'getopt'};
 	    if (!defined($getopt)) {
