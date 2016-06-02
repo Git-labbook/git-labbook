@@ -61,7 +61,7 @@ changes=""
 root=$(git merge-base master $branchname)
 set +e # For NULL case
 # Getting the files with differences
-changes=$(git diff --name-only $root $branchname | grep -v data | grep -v LabBook | grep -v .starpu)
+changes=$(git diff --name-only $root $branchname | grep -v data | grep -v LabBook | grep -v .starpu | grep -v '\.labbook-state')
 set -e
 if [ -n "$changes" ]; then
     echo "ERROR-Changes to source/R inside new data branch!"

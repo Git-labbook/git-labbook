@@ -5,8 +5,13 @@ set -ex
 mkdir -p repo
 rm -rvf repo/* 
 rm -rvf repo/.??* 
+rm -rvf repoMachine2/*
+rm -rvf repoMachine2/.??*
+
 
 DATADIR="$(pwd)/data"
+export PATH="$(pwd)/../blib/script:$(pwd)/../bin:$PATH"
+export PERL5LIB="$(pwd)/../blib/lib:$(pwd)/../lib:$PATH"
 
 mkdir -p repo
 cd repo
@@ -14,13 +19,12 @@ cd repo
 git init
 git am $DATADIR/000[1234]-*
 
-# git-labbook init
+git-labbook init
 
-git checkout -b xp1 HEAD # git-labbook xp start xp1
+git-labbook xp start xp1 -b xp1 --no-labbook-entry
 git am $DATADIR/000[56]-*
 
 git checkout master
-git branch data # no need for this one, as it is already created with git-labbook init
 git am $DATADIR/000[78]-*
 
 git checkout xp1
@@ -54,8 +58,6 @@ git tag stable0.9
 #############################################
 # Launching xp3 experiments on another machine
 cd ..
-rm -rvf repoMachine2/* 
-rm -rvf repoMachine2/.??*
 
 git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git-labbook clone src or something similar
 
@@ -77,3 +79,5 @@ git am $DATADIR/002[5]-*
 
 git checkout master
 git am $DATADIR/002[6]-*
+
+echo "SUCCESS REBUILD"
