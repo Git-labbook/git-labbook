@@ -13,6 +13,7 @@ Moose::Exporter->setup_import_methods(
 		   'has_config_file',
 		   'has_config_dir',
 		   'has_config_str',
+		   'has_config_bool',
 #                   'has_value_constant',
 #                   'has_value_directive',
 #                   'has_value_separator_optional',
@@ -109,6 +110,7 @@ sub has_config {
 
     $meta->add_attribute(
         $name,
+	writer    => '_set_'.$name, 
         default   => sub {
             my $self=shift;
             #print 'creating '.$name.' with parent: ', blessed($self), "\n";
@@ -155,6 +157,14 @@ sub has_config_str {
     my ( $meta, $name, %attr ) = @_;
     has_config($meta, $name,
 	       isa => 'Str',
+	       %attr,
+	);
+}
+
+sub has_config_bool {
+    my ( $meta, $name, %attr ) = @_;
+    has_config($meta, $name,
+	       isa => 'Bool',
 	       %attr,
 	);
 }

@@ -44,6 +44,7 @@ sub set {
     if (! defined($realname)) {
 	die "Invalid option name $optname";
     }
+    $realname = '_set_'.$realname;
 
     $self->$realname($value);
 }
