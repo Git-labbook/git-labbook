@@ -23,6 +23,11 @@ has_config_dir 'datadir' => (
     default => dir('data'),
     );
 
+has_config_dir 'analysisdir' => (
+    optnames => [ 'analysis-dir-name' ],
+    default => dir('analysis'),
+    );
+
 has_config_str 'databranch' => (
     optnames => [ 'data-branch-name' ],
     default => 'data',

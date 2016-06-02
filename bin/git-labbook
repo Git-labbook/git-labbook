@@ -241,12 +241,15 @@ sub cmd_init {
     ensure_clean("Cannot initialize a LabBook with a dirty index");
     my $srcdir=$labbook->srcdir;
     my $datadir=$labbook->datadir;
+    my $analysisdir=$labbook->analysisdir;
     $srcdir->mkpath;
     $datadir->mkpath;
+    $analysisdir->mkpath;
     my $labbookfile=$labbook->labbookfile;
     if (! $labbookfile->stat()) {
 	my $fh=$labbookfile->openw;
-	print $fh "*Experiments\n";
+	print $fh "* Documentation\n";
+	print $fh "* Experiments\n";
 	$fh->close();
 	command_noisy(qw/add/, $labbookfile);
 	command_noisy(qw/commit -m/, "labbook initialized");
