@@ -13,10 +13,16 @@
 # distribution
 /Git-LabBook-*
 
-# built files
+# Makemaker built files
 /MYMETA.json
 /MYMETA.yml
 /Makefile
 /blib
 /pm_to_blib
 
+# dzil built files
+/.build/
+
+# Tests
+/scenario.d/repo/
+/sandbox/
