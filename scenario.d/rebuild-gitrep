@@ -51,7 +51,7 @@ git am $DATADIR/001[7]-*
 git checkout xp/xp2
 git-labbook xp finish
 
-git am $DATADIR/001[8]-*
+#git am $DATADIR/001[8]-*
 
 git checkout master
 git am $DATADIR/001[9]-*
@@ -76,7 +76,7 @@ git checkout xp3
 git-labbook xp finish
 #git checkout data # no need for this one, as it is already done with git-labbook xp finish
 #../git_merge.sh -b heads/xp3 # no need for this one, as it is already done with git-labbook xp finish
-git am $DATADIR/002[5]-*
+#git am $DATADIR/002[5]-*
 #############################################
 
 git checkout master

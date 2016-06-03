@@ -359,8 +359,10 @@ sub cmd_xp_start {
 	command_noisy(qw/add/, $labbookfile);
     }
     my $labbookstate=$labbook->labbookstate;
+    my $sha1=command_oneline(qw/rev-parse HEAD/);
     command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state xp/);
     command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
+    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp-start/, $sha1);
     command_noisy(qw/add/, $labbookstate);
     command_noisy(qw/commit -m/, "Experiment $name started");
 }
@@ -385,14 +387,19 @@ sub cmd_xp_finish {
 	fatal "E: The current experiment has no registered name";
     }
 
-    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
-    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
-
     my $xptag=$labbook->xptag($name);
     command_noisy('tag', $xptag);
 
+    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
+    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
+
+    $ENV{'_GITLABBOOK_STATE'}='xp-merge';
+    $ENV{'_GITLABBOOK_XP_NAME'}=command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
+    $ENV{'_GITLABBOOK_XP_START'}=command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp-start/);
+    $ENV{'_GITLABBOOK_XP_END'}=command_oneline(qw/rev-parse HEAD/);
     command_noisy('checkout', $labbook->databranch);
     command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
+    delete($ENV{'_GITLABBOOK_STATE'});
 }
 
 sub cmd__merge {
@@ -402,14 +409,51 @@ sub cmd__merge {
     my $fother = shift;
     my $path = shift;
 
+    if ( ($ENV{'_GITLABBOOK_STATE'} // '') ne 'xp-merge') {
+	fatal "E: git-labbook _merge operation invocked out of git-labbook standard operation context";
+    }
+    
     if ($path eq $labbook->labbookstate) {
 	copy($fcurrent, $fancestor) or die "Copy failed: $!";
 	return;
     }
     if ($path eq $labbook->labbookfile) {
-	system("org-merge-driver", $fancestor, $fcurrent, $fother, "tmpfile") == 0
-	    or fatal "E: cannot merge $path";
-	move("tmpfile", $fancestor);
+	my ($pipe, $ctx)=command_output_pipe('diff', $ENV{'_GITLABBOOK_XP_START'}.'..'.$ENV{'_GITLABBOOK_XP_END'},
+					     '--', $labbook->labbookfile);
+	my @diffs=<$pipe>;
+	command_close_pipe($pipe, $ctx);
+	my @diffxp;
+	while (defined(my $line = shift @diffs)) {
+	    last if ($line =~ /^@@/);
+	}
+	while (defined(my $line = shift @diffs)) {
+	    if ($line =~ /^[+][*][*] $ENV{'_GITLABBOOK_XP_NAME'}/) {
+		push @diffxp, substr($line, 1);
+		last;
+	    }
+	}
+	while (defined(my $line = shift @diffs)) {
+	    if ($line !~ /^[+]/ && $line !~ /^\s$/) {
+		@diffxp=();
+		last
+	    }
+	    push @diffxp, substr($line, 1);
+	}
+	if (scalar(@diffxp) == 0) {
+	    print STDERR "I: xp results are not just added at the end of the labbook. Trying merge with org-merge-driver.\n";
+
+	    my $res = system("org-merge-driver", $fancestor, $fcurrent, $fother, "tmpfile") == 0;
+	    move("tmpfile", $fcurrent);
+	    if (!$res) {
+		fatal "E: still conflicts to resolve into $path";
+	    }
+	    return;
+	} else {
+	    print STDERR "I: adding xp results in the data labbook.\n";
+	    my $fh=file($fcurrent)->opena();
+	    print $fh @diffxp;
+	    $fh->close;
+	}
 	return;
     }
     fatal "E: git-labbook internal driver cannot be invocked on '$path' file";
