@@ -1,0 +1,21 @@
+
+Up-to-date Perl packages requirement is listed in Makefile.PL
+(only run-time dependencies)
+For build from Git, some dist-zilla perl modules are also required
+
+On Debian/Ubuntu, the following packages can be installed
+(this list is not necessarily up-to-date):
+
+Debian packages required to run:
+libnamespace-sweep-perl
+libmoosex-classattribute-perl
+libtrycatch-perl
+libuniversal-require-perl
+
+Additionnal Debian packages required to build from Git:
+libdist-zilla-perl
+libdist-zilla-plugin-ourpkgversion-perl
+libdist-zilla-plugin-podweaver-perl
+libdist-zilla-plugin-run-perl
+libdist-zilla-plugin-test-perl-critic-perl
+
