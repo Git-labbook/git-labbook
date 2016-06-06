@@ -26,6 +26,7 @@ use File::Spec;
 use File::Copy;
 use Getopt::Long qw/:config gnu_getopt no_ignore_case auto_abbrev/;
 use Memoize;
+use TryCatch;
 use Path::Class;
 use Git::LabBook;
 use Git::LabBook::Cmds;
@@ -103,6 +104,15 @@ my %options = (
     },
     'init' => {
     },
+    'xp-clone' => {
+	'master-branch-name' => {
+	    'getopt' => 's',
+	    'salias' => 'b',
+	    'aliases' => ['branch'],
+	    'config' => 'srcbranch',
+	    'desc' => 'branch to clone',
+	},
+    },
     'xp-start' => {
 	'xp-branch-name' => {
 	    'getopt' => 's',
@@ -145,6 +155,10 @@ $cmds->register(
     'has-subcmds' => 1,
     'desc' => "manage an experiment (requires subcommand)",
     )->register(
+    'name' => 'clone',    
+    'code' => \&cmd_clone,
+    'desc' => "clone only one branch of a repo",
+    )->register(
     'main-cmd' => 'xp',
     'name' => 'start',    
     'code' => \&cmd_xp_start,
@@ -158,6 +172,10 @@ $cmds->register(
     'name' => '_merge',
     'code' => \&cmd__merge,
     'desc' => "Internal merge driver for git-labbook specific files",
+    )->register(
+    'name' => '_clone',
+    'code' => \&cmd__clone,
+    'desc' => "Internal clone suboperation",
     );
 
 my $labbook = new Git::LabBook();
@@ -198,33 +216,16 @@ if ($cmds->cmd_parsed && $cmds->cmd->fullname eq 'help') {
     usage(0);
 }
 
-if ($cmds->cmd_parsed) {
+# fake while, just to be able to call 'last'
+while ($cmds->cmd_parsed) {
     $cmd=$cmds->cmd;
+    last if $cmd->fullname =~ /clone/;
 
-    my ($git_dir, $cdup);
-    git_cmd_try {
-	$git_dir = command_oneline([qw/rev-parse --git-dir/]);
-    } "Unable to find .git directory\n";
-    git_cmd_try {
-	$cdup = command_oneline(qw/rev-parse --show-cdup/);
-	chomp $cdup if ($cdup);
-	$cdup = "." unless ($cdup && length $cdup);
-    } "Already at toplevel, but $git_dir not found\n";
-    $ENV{GIT_DIR} = $git_dir;
-    chdir $cdup or die "Unable to chdir up to '$cdup'\n";
-    $_repository = Git->repository(Repository => $ENV{GIT_DIR});
+    init_repo('.');
+    last;
 }
 
-my %opts=();
-%opts = %{$cmd->opts($labbook)} if (defined $cmd);
-
-read_git_config(\%opts);
-#if ($cmd && ($cmd eq 'log' || $cmd eq 'blame')) {
-#        Getopt::Long::Configure('pass_through');
-#}
-@ARGV=$cmds->ARGV;
-my $rv = GetOptions(%opts, 'help|H' => \$_help, 'version|V' => \$_version);
-exit 1 if (!$rv && $cmd);
+parse_opts();
 
 usage(0) if $_help;
 version() if $_version;
@@ -277,6 +278,8 @@ usage: git labbook <command> [subcommand] [options] [arguments]\n
     print $fd "Available commands:\n";
     
     foreach (sort { $a->fullname cmp $b->fullname } $cmds->all_cmds) {
+	# do not display internal commands
+	next if $_->name =~ /^_/;
 	#next if $_->has_subcmds && !defined($cmd);
 	print $fd '  ',pack('A17',$_->displayname),$_->desc,"\n";
 	#foreach (sort keys %{$_->opts}) {
@@ -294,8 +297,18 @@ usage: git labbook <command> [subcommand] [options] [arguments]\n
 }
 
 sub version {
-        print "git-labbook version $VERSION\n";
-        exit 0;
+    print "git-labbook version $VERSION\n";
+    exit 0;
+}
+
+sub setup_repo {
+    try {
+	$_repository->command(qw/config --get-regexp '^merge\.gitlabbookmerge\.'/);
+    } catch (Git::Error::Command $e) {
+	print STDERR "I: setting up labbook merge driver ($e)\n";
+	$_repository->command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.name/, "Git LabBook specific merge driver");
+	$_repository->command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.driver/, "git-labbook _merge -- %O %A %B %P");
+    }
 }
 
 sub cmd_init {
@@ -308,34 +321,76 @@ sub cmd_init {
     $analysisdir->mkpath;
     my $labbookfile=$labbook->labbookfile;
     {
+	setup_repo;
 	my $fh=file('.gitattributes')->opena;
 	print $fh "/", $labbook->labbookstate, " merge=gitlabbookmerge\n";
 	print $fh "/", $labbookfile, " merge=gitlabbookmerge\n";
 	$fh->close();
-	command_noisy(qw/add .gitattributes /);
+	$_repository->command_noisy(qw/add .gitattributes /);
 	
-	command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.name/, "Git LabBook specific merge driver");
-	command_noisy(qw/config --local --replace-all merge.gitlabbookmerge.driver/, "git-labbook _merge -- %O %A %B %P");
-	
-	command_noisy(qw/commit -m/, "labbook setup");
+	$_repository->command_noisy(qw/commit -m/, "labbook setup");
     }
     if (! $labbookfile->stat()) {
 	my $fh=$labbookfile->openw;
 	print $fh "* Documentation\n";
 	print $fh "* Experiments\n";
 	$fh->close();
-	command_noisy(qw/add/, $labbookfile);
-	command_noisy(qw/commit -m/, "labbook initialized");
+	$_repository->command_noisy(qw/add/, $labbookfile);
+	$_repository->command_noisy(qw/commit -m/, "labbook initialized");
 
     }
-    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
-    command_noisy('checkout', '-b', $labbook->databranch);
+    my $cur_ref = $_repository->command_oneline('symbolic-ref', 'HEAD');
+    $_repository->command_noisy('checkout', '-b', $labbook->databranch);
     my $labbookstate=$labbook->labbookstate;
-    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state data/);
-    command_noisy(qw/add/, $labbookstate);
-    command_noisy(qw/commit -m/, "Data branch started");
-    command_noisy(qw/symbolic-ref -m/, "labbook: switch back to previous point", 'HEAD', $cur_ref);
-    command_noisy(qw/reset --hard HEAD/);
+    $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state data/);
+    $_repository->command_noisy(qw/add/, $labbookstate);
+    $_repository->command_noisy(qw/commit -m/, "Data branch started");
+    $_repository->command_noisy(qw/symbolic-ref -m/, "labbook: switch back to previous point", 'HEAD', $cur_ref);
+    $_repository->command_noisy(qw/reset --hard HEAD/);
+}
+
+use Data::Dumper;
+sub cmd_clone {
+    my $cmd = shift;
+
+    print STDERR "I: cloning only the ", $labbook->srcbranch, " branch\n";
+    my $dir;
+    my @args=@_;
+    $ENV{'_GITLABBOOK_CMD'}='xp-clone';
+    my ($fh, $c) = command_output_pipe(qw/labbook _clone --single-branch -b/, $labbook->srcbranch, @args);
+    while(defined(my $line=<$fh>)) {
+	chomp($line);
+	if ($line =~ /Cloning into (bare repository )?'(?<dir>.*)'\.\.\.$/) {
+	    $dir=$+{'dir'};
+	    #print "F ($dir): $line\n";
+	    last;
+	}
+	#print "S: $line\n";
+    }
+    while(defined(my $line=<$fh>)) {
+	#print $line;
+    }
+    command_close_pipe($fh, $c);
+    if (not defined($dir)) {
+	fatal "Cannot find the cloned directory";
+    }
+    init_repo($dir);
+    setup_repo;
+}
+
+sub cmd__clone {
+    my $cmd = shift;
+    shift; # consume the '_clone' cmd as args are not parsed.
+    
+    my $lc_all=$ENV{'LC_ALL'};
+    if ( ($ENV{'_GITLABBOOK_CMD'} // '') ne 'xp-clone') {
+	fatal "E: git-labbook _merge operation invocked out of git-labbook standard operation context";
+    }
+    print STDERR "I: really cloning '".join("' '", @_)."'\n";
+    open(STDERR, ">&STDOUT");
+    $ENV{'LC_ALL'}='C';
+    my $dir;
+    command_noisy(qw/clone/, @_);
 }
 
 sub cmd_xp_start {
@@ -348,7 +403,7 @@ sub cmd_xp_start {
 
     ensure_clean("Cannot start a new experiment with a dirty index");
     my $xpbranch=$labbook->xpbranch($name);
-    command_noisy('checkout', '-b', $xpbranch);
+    $_repository->command_noisy('checkout', '-b', $xpbranch);
     my $datadir=dir($labbook->datadir, $name);
     $datadir->mkpath;
     if ($labbook->labbookentry) {
@@ -356,15 +411,15 @@ sub cmd_xp_start {
 	my $fh=$labbookfile->opena;
 	print $fh "** $name\n";
 	$fh->close();
-	command_noisy(qw/add/, $labbookfile);
+	$_repository->command_noisy(qw/add/, $labbookfile);
     }
     my $labbookstate=$labbook->labbookstate;
-    my $sha1=command_oneline(qw/rev-parse HEAD/);
-    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state xp/);
-    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
-    command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp-start/, $sha1);
-    command_noisy(qw/add/, $labbookstate);
-    command_noisy(qw/commit -m/, "Experiment $name started");
+    my $sha1=$_repository->command_oneline(qw/rev-parse HEAD/);
+    $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state xp/);
+    $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
+    $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp-start/, $sha1);
+    $_repository->command_noisy(qw/add/, $labbookstate);
+    $_repository->command_noisy(qw/commit -m/, "Experiment $name started");
 }
 
 sub cmd_xp_finish {
@@ -374,8 +429,8 @@ sub cmd_xp_finish {
 
     my ($state,$name);
     eval {
-	$state = command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.state/);
-	$name = command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
+	$state = $_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.state/);
+	$name = $_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
     };
     if (!defined($state)) {
 	fatal "E: You are not in an experiment (no state)";
@@ -388,17 +443,17 @@ sub cmd_xp_finish {
     }
 
     my $xptag=$labbook->xptag($name);
-    command_noisy('tag', $xptag);
+    $_repository->command_noisy('tag', $xptag);
 
-    my $cur_ref = command_oneline('symbolic-ref', 'HEAD');
-    my $short_cur_ref = command_oneline('symbolic-ref', '--short', 'HEAD');
+    my $cur_ref = $_repository->command_oneline('symbolic-ref', 'HEAD');
+    my $short_cur_ref = $_repository->command_oneline('symbolic-ref', '--short', 'HEAD');
 
-    $ENV{'_GITLABBOOK_STATE'}='xp-merge';
-    $ENV{'_GITLABBOOK_XP_NAME'}=command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
-    $ENV{'_GITLABBOOK_XP_START'}=command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp-start/);
-    $ENV{'_GITLABBOOK_XP_END'}=command_oneline(qw/rev-parse HEAD/);
-    command_noisy('checkout', $labbook->databranch);
-    command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
+    $ENV{'_GITLABBOOK_CMD'}='xp-finish';
+    $ENV{'_GITLABBOOK_XP_NAME'}=$_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
+    $ENV{'_GITLABBOOK_XP_START'}=$_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp-start/);
+    $ENV{'_GITLABBOOK_XP_END'}=$_repository->command_oneline(qw/rev-parse HEAD/);
+    $_repository->command_noisy('checkout', $labbook->databranch);
+    $_repository->command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
     delete($ENV{'_GITLABBOOK_STATE'});
 }
 
@@ -409,7 +464,7 @@ sub cmd__merge {
     my $fother = shift;
     my $path = shift;
 
-    if ( ($ENV{'_GITLABBOOK_STATE'} // '') ne 'xp-merge') {
+    if ( ($ENV{'_GITLABBOOK_CMD'} // '') ne 'xp-finish') {
 	fatal "E: git-labbook _merge operation invocked out of git-labbook standard operation context";
     }
     
@@ -418,10 +473,10 @@ sub cmd__merge {
 	return;
     }
     if ($path eq $labbook->labbookfile) {
-	my ($pipe, $ctx)=command_output_pipe('diff', $ENV{'_GITLABBOOK_XP_START'}.'..'.$ENV{'_GITLABBOOK_XP_END'},
+	my ($pipe, $ctx)=$_repository->command_output_pipe('diff', $ENV{'_GITLABBOOK_XP_START'}.'..'.$ENV{'_GITLABBOOK_XP_END'},
 					     '--', $labbook->labbookfile);
 	my @diffs=<$pipe>;
-	command_close_pipe($pipe, $ctx);
+	$_repository->command_close_pipe($pipe, $ctx);
 	my @diffxp;
 	while (defined(my $line = shift @diffs)) {
 	    last if ($line =~ /^@@/);
@@ -461,6 +516,38 @@ sub cmd__merge {
 
 ########################### utility functions #########################
 
+sub init_repo {
+    my $dir = shift;
+    chdir $dir || fatal "E: cannot enter directory '$dir'";
+    
+    my ($git_dir, $cdup);
+    git_cmd_try {
+	$git_dir = command_oneline([qw/rev-parse --git-dir/]);
+    } "Unable to find .git directory\n";
+    git_cmd_try {
+	$cdup = command_oneline(qw/rev-parse --show-cdup/);
+	chomp $cdup if ($cdup);
+	$cdup = "." unless ($cdup && length $cdup);
+    } "Already at toplevel, but $git_dir not found\n";
+    $ENV{GIT_DIR} = $git_dir;
+    chdir $cdup or die "Unable to chdir up to '$cdup'\n";
+    $_repository = Git->repository(Repository => $ENV{GIT_DIR});
+}
+
+sub parse_opts {
+    my %opts=();
+    %opts = %{$cmd->opts($labbook)} if (defined $cmd);
+    return if ($cmd && ($cmd->fullname =~ '_clone'));
+
+    read_git_config(\%opts);
+    if ($cmd && ($cmd->fullname =~ 'clone')) {
+        Getopt::Long::Configure('pass_through');
+    }
+    @ARGV=$cmds->ARGV;
+    my $rv = GetOptions(%opts, 'help|H' => \$_help, 'version|V' => \$_version);
+    exit 1 if (!$rv && $cmd);
+}
+    
 use Data::Dumper;
 # convert GetOpt::Long specs for use by git-config
 sub read_git_config {
@@ -506,8 +593,8 @@ sub read_git_config {
 sub ensure_clean {
     my $msg = shift;
     
-    command_noisy(qw/update-index --refresh/);
-    git_cmd_try { command_oneline(qw/diff-index --quiet HEAD --/) }
+    $_repository->command_noisy(qw/update-index --refresh/);
+    git_cmd_try { $_repository->command_oneline(qw/diff-index --quiet HEAD --/) }
     $msg."\nCommit your changes first, "
 	. "or stash them with `git stash'.\n";
 }

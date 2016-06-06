@@ -61,7 +61,9 @@ git tag stable0.9
 # Launching xp3 experiments on another machine
 cd ..
 
-git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git-labbook clone src or something similar
+#git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git-labbook clone src or something similar
+pwd
+git-labbook clone repo repoMachine2
 
 cd repoMachine2
 

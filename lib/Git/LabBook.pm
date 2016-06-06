@@ -36,6 +36,10 @@ has_config_str 'xpbranch' => (
     default => 'xp/%s',
     );
 
+has_config_str 'srcbranch' => (
+    default => 'master',
+    );
+
 has_config_str 'xptag' => (
     default => 'xp/%s',
     );
