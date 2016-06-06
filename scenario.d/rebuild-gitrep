@@ -62,14 +62,15 @@ git tag stable0.9
 cd ..
 
 #git clone -b master --single-branch repo repoMachine2 # git-labbook setup or git-labbook clone src or something similar
-pwd
+#pwd
 git-labbook clone repo repoMachine2
 
 cd repoMachine2
 
 git-labbook xp start xp3 -b xp3 --no-labbook-entry
 git am $DATADIR/002[01234]-*
-git push -u origin xp3 # git-labbook xp push
+#git push -u origin xp3 #
+git-labbook xp push
 
 cd ..
 cd repo

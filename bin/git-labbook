@@ -169,6 +169,11 @@ $cmds->register(
     'code' => \&cmd_xp_finish,
     'desc' => "close the current experiment",
     )->register(
+    'main-cmd' => 'xp',
+    'name' => 'push',
+    'code' => \&cmd_xp_push,
+    'desc' => "push the current experiment branch",
+    )->register(
     'name' => '_merge',
     'code' => \&cmd__merge,
     'desc' => "Internal merge driver for git-labbook specific files",
@@ -427,17 +432,16 @@ sub cmd_xp_finish {
 
     my $labbookstate=$labbook->labbookstate;
 
-    my ($state,$name);
-    eval {
-	$state = $_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.state/);
-	$name = $_repository->command_oneline(qw/config -f/, $labbookstate, qw/labbook-state.xp/);
-    };
-    if (!defined($state)) {
-	fatal "E: You are not in an experiment (no state)";
-    }
-    if ($state ne 'xp') {
-	fatal "E: You are not in an experiment (current state: $state)";
-    }
+    my $info = get_state(
+	'require' => {
+	    'state' => 'xp',
+	},
+	'want' => [
+	    'xp',
+	],
+	);
+    my ($state,$name)=('xp', $info->{'xp'});
+
     if (!defined($name) || $name eq '') {
 	fatal "E: The current experiment has no registered name";
     }
@@ -455,6 +459,31 @@ sub cmd_xp_finish {
     $_repository->command_noisy('checkout', $labbook->databranch);
     $_repository->command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
     delete($ENV{'_GITLABBOOK_STATE'});
+}
+
+sub cmd_xp_push {
+    my $cmd = shift;
+
+    my $labbookstate=$labbook->labbookstate;
+
+    my $info = get_state(
+	'require' => {
+	    'state' => 'xp',
+	},
+	'want' => [
+	    'xp',
+	],
+	);
+    my ($state,$name)=('xp', $info->{'xp'});
+
+    if (!defined($name) || $name eq '') {
+	fatal "E: The current experiment has no registered name";
+    }
+
+    my $xptag=$labbook->xptag($name);
+    my $cur_ref = $_repository->command_oneline('symbolic-ref', '--short', 'HEAD');
+    print STDERR "I: git '", join("' '",qw/push -u/, shift // 'origin', $cur_ref), "'\n";
+    $_repository->command_noisy(qw/push -u/, shift // 'origin', $cur_ref);
 }
 
 sub cmd__merge {
@@ -588,6 +617,52 @@ sub read_git_config {
     }
     delete @$opts{@config_only} if @config_only;
     #print "opts=", Dumper($opts), "\n";
+}
+
+sub get_state {
+    my %p = @_;
+    my %res;
+
+    my $labbookstate=$labbook->labbookstate;
+
+    if (exists($p{'require'})) {
+	foreach my $key (keys %{$p{'require'}}) {
+	    my $rval;
+	    eval {
+		$rval = $_repository->command_oneline(qw/config -f/, $labbookstate, 'labbook-state.'.$key);
+	    };
+	    if (!defined($rval)) {
+		fatal "E: labbook-state: cannot find the '$key' key";
+	    }
+	    if ($rval ne $p{'require'}->{$key}) {
+		fatal "E: labbook-state: invalid value '$rval' for key '$key' (expected: '"
+		    .$p{'require'}->{$key}."'";
+	    }
+	    $res{$key}=$rval;
+	}
+    }
+    if (exists($p{'want'})) {
+	foreach my $key (@{$p{'want'}}) {
+	    my $rval;
+	    eval {
+		$rval = $_repository->command_oneline(qw/config -f/, $labbookstate, 'labbook-state.'.$key);
+	    };
+	    if (!defined($rval)) {
+		fatal "E: labbook-state: cannot find the '$key' key";
+	    }
+	    $res{$key}=$rval;
+	}
+    }
+    if (exists($p{'wish'})) {
+	foreach my $key (@{$p{'wish'}}) {
+	    my $rval;
+	    eval {
+		$rval = $_repository->command_oneline(qw/config -f/, $labbookstate, 'labbook-state.'.$key);
+	    };
+	    $res{$key}=$rval;
+	}
+    }
+    return \%res;
 }
 
 sub ensure_clean {
