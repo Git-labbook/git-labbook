@@ -423,6 +423,7 @@ sub cmd_xp_start {
     $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.state xp/);
     $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp/, $name);
     $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp-start/, $sha1);
+    $_repository->command_noisy(qw/config -f/, $labbookstate, qw/--replace-all labbook-state.xp-branch/, $xpbranch);
     $_repository->command_noisy(qw/add/, $labbookstate);
     $_repository->command_noisy(qw/commit -m/, "Experiment $name started");
 }
@@ -438,6 +439,9 @@ sub cmd_xp_finish {
 	},
 	'want' => [
 	    'xp',
+	],
+	'wish' => [
+	    'xp-branch',
 	],
 	);
     my ($state,$name)=('xp', $info->{'xp'});
@@ -459,6 +463,14 @@ sub cmd_xp_finish {
     $_repository->command_noisy('checkout', $labbook->databranch);
     $_repository->command_noisy(qw/merge -s recursive -m/, "Merging with $short_cur_ref branch", $short_cur_ref);
     delete($ENV{'_GITLABBOOK_STATE'});
+
+    my $xpbranch=$labbook->xpbranch($name, $info->{'xp-branch'});
+    $_repository->command_noisy('branch', '-D', $xpbranch);
+    try {
+	$_repository->command_noisy('push', 'origin', ':'.$xpbranch);
+    } catch (Git::Error::Command $e) {
+	print STDERR "W: do deleting remote expe branch\n";
+    }
 }
 
 sub cmd_xp_push {

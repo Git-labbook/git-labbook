@@ -68,6 +68,8 @@ around 'xpbranch' => sub {
     my $self = shift;
 
     my $xpname = shift;
+    my $xpbranch = shift;
+    return $xpbranch if defined($xpbranch);
     my $branch=$self->$orig();
     $branch =~ s/%s/$xpname/ if defined($xpname);
     return $branch;
