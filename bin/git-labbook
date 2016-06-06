@@ -99,7 +99,7 @@ my %options = (
 	'analysis-dir-name' => {
 	    'getopt' => 's',
 	    'config' => 'analysisdir',
-	    'desc' => 'directory with analysis material', 
+	    'desc' => 'directory with analysis material',
 	},
     },
     'init' => {
@@ -136,7 +136,7 @@ my %options = (
 	    'desc' => 'tag name template for experiments',
 	},
     },
-);    
+);
 
 my $cmds = new Git::LabBook::Cmds(
     'options' => \%options,
@@ -155,17 +155,17 @@ $cmds->register(
     'has-subcmds' => 1,
     'desc' => "manage an experiment (requires subcommand)",
     )->register(
-    'name' => 'clone',    
+    'name' => 'clone',
     'code' => \&cmd_clone,
     'desc' => "clone only one branch of a repo",
     )->register(
     'main-cmd' => 'xp',
-    'name' => 'start',    
+    'name' => 'start',
     'code' => \&cmd_xp_start,
     'desc' => "start a new experiment (requires a name)",
     )->register(
     'main-cmd' => 'xp',
-    'name' => 'finish',    
+    'name' => 'finish',
     'code' => \&cmd_xp_finish,
     'desc' => "close the current experiment",
     )->register(
@@ -185,21 +185,21 @@ $cmds->register(
 
 my $labbook = new Git::LabBook();
 
-package FakeTerm;  
-sub new {          
+package FakeTerm;
+sub new {
         my ($class, $reason) = @_;
         return bless \$reason, shift;
-}                       
+}
 sub readline {
-        my $self = shift;    
+        my $self = shift;
         die "Cannot use readline on FakeTerm: $$self";
-}                            
+}
 package main;
 
-my $term;             
+my $term;
 sub term_init {
-        $term = eval { 
-                require Term::ReadLine; 
+        $term = eval {
+                require Term::ReadLine;
                 $ENV{"GIT_LABBOOK_NOTTY"}
                         ? new Term::ReadLine 'git-labbook', \*STDIN, \*STDOUT
                         : new Term::ReadLine 'git-labbook';
@@ -264,7 +264,7 @@ usage: git labbook <command> [subcommand] [options] [arguments]\n
 	    my $t = $opt->{'getopt'};
 	    my $x = $t eq 's' ? '<arg>' : $t eq 'i' ? '<num>' : '';
 	    printf $fd "% 4s %-30s%s (default: %s)\n", ' ', join(', ', @{$opt->{'names'}}).
-	    " $x ", $opt->{'desc'}, $opt->{'default'}; 
+	    " $x ", $opt->{'desc'}, $opt->{'default'};
 	}
     };
 
@@ -281,7 +281,7 @@ usage: git labbook <command> [subcommand] [options] [arguments]\n
     print $fd "  Common options:\n";
     $print_opts->();
     print $fd "Available commands:\n";
-    
+
     foreach (sort { $a->fullname cmp $b->fullname } $cmds->all_cmds) {
 	# do not display internal commands
 	next if $_->name =~ /^_/;
@@ -386,7 +386,7 @@ sub cmd_clone {
 sub cmd__clone {
     my $cmd = shift;
     shift; # consume the '_clone' cmd as args are not parsed.
-    
+
     my $lc_all=$ENV{'LC_ALL'};
     if ( ($ENV{'_GITLABBOOK_CMD'} // '') ne 'xp-clone') {
 	fatal "E: git-labbook _merge operation invocked out of git-labbook standard operation context";
@@ -496,7 +496,7 @@ sub cmd__merge {
     if ( ($ENV{'_GITLABBOOK_CMD'} // '') ne 'xp-finish') {
 	fatal "E: git-labbook _merge operation invocked out of git-labbook standard operation context";
     }
-    
+
     if ($path eq $labbook->labbookstate) {
 	copy($fcurrent, $fancestor) or die "Copy failed: $!";
 	return;
@@ -548,7 +548,7 @@ sub cmd__merge {
 sub init_repo {
     my $dir = shift;
     chdir $dir || fatal "E: cannot enter directory '$dir'";
-    
+
     my ($git_dir, $cdup);
     git_cmd_try {
 	$git_dir = command_oneline([qw/rev-parse --git-dir/]);
@@ -576,7 +576,7 @@ sub parse_opts {
     my $rv = GetOptions(%opts, 'help|H' => \$_help, 'version|V' => \$_version);
     exit 1 if (!$rv && $cmd);
 }
-    
+
 use Data::Dumper;
 # convert GetOpt::Long specs for use by git-config
 sub read_git_config {
@@ -667,10 +667,10 @@ sub get_state {
 
 sub ensure_clean {
     my $msg = shift;
-    
+
     $_repository->command_noisy(qw/update-index --refresh/);
     git_cmd_try { $_repository->command_oneline(qw/diff-index --quiet HEAD --/) }
     $msg."\nCommit your changes first, "
 	. "or stash them with `git stash'.\n";
 }
-    
+
