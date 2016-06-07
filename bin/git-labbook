@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # License: GPL v2 or later
 
-# ABSTRACT: manage a laboratory book with Git
+# ABSTRACT: Git branching model adapted to experimental research
 
 package git::labbook;
 

@@ -2,7 +2,7 @@ package Git::LabBook;
 use Moose;
 use namespace::sweep;
 
-# ABSTRACT: manage a laboratory book with Git
+# ABSTRACT: Git branching model adapted to experimental research
 
 use Git::LabBook::Types;
 use Git::LabBook::ConfigAttribute;
