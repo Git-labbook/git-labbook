@@ -5,8 +5,8 @@
 #+TAGS: Arnaud(A) Luka(L) Vincent(V)
 
 * RR-packaging our git workflow:
-** TODO Commands [0/15]:                                           :Vincent:
-   - [ ] git labbook init:
+** TODO Commands [3/17]:                                           :Vincent:
+   - [X] git labbook init:
      + Naming conventions
      + Commit to the local "labbook" branch
      + Create directories src, data, analysis
@@ -17,7 +17,7 @@
    - [ ] git labbook src|data pull|push:
      + Pulling/pushing only the src|data branch
 
-   - [ ] git labbook xp start foo [src] [head] [--from branch|tag] [--commit SHA1]:
+   - [X] git labbook xp start foo [src] [head] [--from branch|tag] [--commit SHA1]:
      + Create branch foo or xp_foo
      + Create directory foo in data folder
      + Create org entry in Labbook
@@ -29,7 +29,7 @@
      + Pushing only current branch
    - [ ] git labbook xp abort
      + Checkout src and delete xp branch xp_foo and remote xp_foo?
-   - [ ] git labbook xp finish
+   - [X] git labbook xp finish
      + Create a revert commit of all the source modifications. Or dont.
      + Merge xp_foo with the data branch
      + Pay attention on merging data entries from the Labbook
@@ -58,6 +58,9 @@
      + Checkout data and delete article branch article_foo and remote article_foo?
    - [ ] git labbook article finish
      + Add a tag "final_version_X", where X corresponds to the number of "final_version_X" tags between this one and the tag start_article_foo + 1. This is just in case there multiple final versions, and thus multiple git labbook article finish calls
+
+   - [ ] (possibly) git-labbook website start
+   - [ ] (possibly) git-labbook website publish
 
 ** Ideas and discussions:
   - If based on Org-mode files (Labbook.org) we should probably use org-merger, although this creates dependencies: http://orgmode.org/worg/org-contrib/gsoc2012/student-projects/git-merge-tool/manual.html
@@ -441,3 +444,6 @@ particular here is what we'll need for the
 - Limiting Commits to Graph and Collapsing History (see [[http://correl.phoenixinquis.net/2015/07/12/git-graphs.html#orgheadline14][blog post]])
 - Change orientation (trivial)
 ** Man pages
+* TODO Demo
+- An initial demo was done as a part of the [[https://github.com/alegrand/RR_webinars/blob/git-webinar/4_logging_and_backing_up_your_work/index.org][RR_Webinars]]
+- It should be rechecked, adapted and enlarged to use all git-labbook commands
